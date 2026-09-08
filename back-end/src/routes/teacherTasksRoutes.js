@@ -25,13 +25,13 @@ router.get("/:id", getTeacherTask);
 // Create / Update teacher tasks - Admin + Grade Level Chairperson
 router.post(
     "/",
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     createTeacherTaskRecord
 );
 
 router.put(
     "/:id",
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     updateTeacherTaskRecord
 );
 

@@ -25,13 +25,13 @@ router.get("/:id", getTeacherById);
 // Create / Update teachers - Admin + Grade Level Chairperson
 router.post(
     "/",
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     createTeacher
 );
 
 router.put(
     "/:id",
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     updateTeacher
 );
 

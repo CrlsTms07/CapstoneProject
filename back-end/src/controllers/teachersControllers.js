@@ -31,16 +31,7 @@ const getTeacherById = async (req, res) => {
         const { id } = req.params;
 
         const result = await pool.query(
-            `
-            SELECT
-                teacher_id,
-                user_id,
-                last_name,
-                max_subject_load,
-                weekly_load_minutes
-            FROM teachers
-            WHERE teacher_id = $1
-            `,
+            `SELECT teacher_id, user_id, last_name, max_subject_load, weekly_load_minutes FROM teachers WHERE teacher_id = $1`,
             [id]
         );
 
@@ -50,7 +41,16 @@ const getTeacherById = async (req, res) => {
             });
         }
 
-        res.status(200).json(result.rows[0]);
+        const teacher = result.rows[0];
+
+        // If logged-in user is a Teacher, ensure they can only view their own profile
+        if (req.session && req.session.user && req.session.user.role_id === 4) {
+            if (teacher.user_id !== req.session.user.user_id) {
+                return res.status(403).json({ error: "Access denied." });
+            }
+        }
+
+        res.status(200).json(teacher);
     } catch (error) {
         console.error("Error fetching teacher:", error);
 

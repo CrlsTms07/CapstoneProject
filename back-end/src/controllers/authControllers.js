@@ -1,10 +1,14 @@
 const bcrypt = require("bcrypt");
 const { findUserByUsername } = require("../models/authModel");
+const pool = require("../config/database");
+
+// Simple in-memory reset token store for dev flow { username -> { token, expiresAt } }
+const resetTokens = new Map();
 
 // LOGIN
 const login = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, role_id } = req.body;
 
         // Validate input
         if (!username || !password) {
@@ -23,6 +27,11 @@ const login = async (req, res) => {
             });
         }
 
+        // Check approval
+        if (user.is_approved === false) {
+            return res.status(403).json({ error: 'Account pending admin approval.' });
+        }
+
         // Verify password
         const passwordMatch = await bcrypt.compare(
             password,
@@ -33,6 +42,11 @@ const login = async (req, res) => {
             return res.status(401).json({
                 error: "Invalid username or password."
             });
+        }
+
+        // If client sent a selected role_id, ensure it matches the user's role
+        if (role_id !== undefined && Number(role_id) !== Number(user.role_id)) {
+            return res.status(403).json({ error: "Selected role does not match account role." });
         }
 
         // Regenerate session ID after successful authentication
@@ -121,8 +135,145 @@ const logout = (req, res) => {
     });
 };
 
+
+// SIGNUP (public)
+const signup = async (req, res) => {
+    try {
+        const { username, password, role_id, department_id } = req.body;
+
+        // Basic validation
+        if (!username || !password || !role_id) {
+            return res.status(400).json({ error: "username, password and role_id are required." });
+        }
+
+        // Prevent public creation of Admin
+        if (Number(role_id) === 1) {
+            return res.status(403).json({ error: "Cannot assign Admin role during signup." });
+        }
+
+        // Ensure role exists
+        const roleRes = await pool.query('SELECT role_id FROM roles WHERE role_id = $1 LIMIT 1', [role_id]);
+        if (roleRes.rows.length === 0) {
+            return res.status(400).json({ error: "Invalid role_id." });
+        }
+
+        // Unique username
+        const existing = await pool.query('SELECT user_id FROM users WHERE username = $1 LIMIT 1', [username]);
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: "Username already exists." });
+        }
+
+        // Hash password
+        const hash = await bcrypt.hash(password, 10);
+
+        // Auto-approve non-admin roles so users can access their dashboards immediately
+        const isApproved = true;
+
+        // Insert user (include password_hash)
+        const insertRes = await pool.query(
+            `INSERT INTO users (username, role_id, department_id, password_hash, is_approved)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING user_id, username, role_id, department_id, is_approved`,
+            [username, role_id, department_id || null, hash, isApproved]
+        );
+
+        const user = insertRes.rows[0];
+
+        // If approved, create session and login user immediately
+        if (user.is_approved) {
+            await new Promise((resolve, reject) => {
+                req.session.regenerate((error) => {
+                    if (error) reject(error);
+                    else resolve();
+                });
+            });
+
+            req.session.user = {
+                user_id: user.user_id,
+                username: user.username,
+                role_id: user.role_id,
+                role_name: null,
+                department_id: user.department_id
+            };
+
+            await new Promise((resolve, reject) => {
+                req.session.save((error) => {
+                    if (error) reject(error);
+                    else resolve();
+                });
+            });
+
+            return res.status(201).json({ message: 'User created', user: req.session.user });
+        }
+
+        return res.status(201).json({ message: 'User created and pending approval', user });
+
+    } catch (error) {
+        console.error('Signup error:', error);
+        return res.status(500).json({ error: 'Signup failed', details: error.message });
+    }
+};
+
+// (module.exports moved below after helper functions)
+
+
+// FORGOT PASSWORD - generate reset token (development flow)
+const forgotPassword = async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username) return res.status(400).json({ error: 'username is required' });
+
+        const user = await findUserByUsername(username);
+        if (!user) {
+            // Don't reveal whether user exists
+            return res.status(200).json({ message: 'If the account exists, a reset token was generated.' });
+        }
+
+        const token = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+        const expiresAt = Date.now() + 1000 * 60 * 15; // 15 minutes
+
+        resetTokens.set(username, { token, expiresAt });
+
+        console.log(`Password reset token for ${username}: ${token} (expires in 15 minutes)`);
+
+        // In production you'd email the token. Here we return a generic response.
+        return res.status(200).json({ message: 'If the account exists, a reset token was generated.' });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        return res.status(500).json({ error: 'Failed to process forgot password request' });
+    }
+};
+
+// RESET PASSWORD - verify token and set new password
+const resetPassword = async (req, res) => {
+    try {
+        const { username, token, new_password } = req.body;
+        if (!username || !token || !new_password) return res.status(400).json({ error: 'username, token and new_password are required' });
+
+        const entry = resetTokens.get(username);
+        if (!entry || entry.token !== token || Date.now() > entry.expiresAt) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        const hash = await bcrypt.hash(new_password, 10);
+
+        await pool.query('UPDATE users SET password_hash = $1 WHERE username = $2', [hash, username]);
+
+        resetTokens.delete(username);
+
+        return res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        return res.status(500).json({ error: 'Failed to reset password' });
+    }
+};
+
+// Export controllers (after functions are defined)
 module.exports = {
     login,
     getCurrentUser,
-    logout
+    logout,
+    signup,
+    forgotPassword,
+    resetPassword
 };

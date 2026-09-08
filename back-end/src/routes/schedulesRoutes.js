@@ -25,14 +25,14 @@ router.get("/:id", getScheduleById);
 // Create schedules - Super Administrator + Grade Level Chairperson
 router.post(
     "/",
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     createSchedule
 );
 
 // Update schedules - Super Administrator + Grade Level Chairperson
 router.put(
     "/:id",
-    authorizeRoles(1, 2),
+    authorizeRoles(1, 2, 3),
     updateSchedule
 );
 

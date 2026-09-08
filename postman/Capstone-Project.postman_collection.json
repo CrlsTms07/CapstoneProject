@@ -1,0 +1,51 @@
+{
+  "info": {
+    "name": "Capstone-Project API",
+    "_postman_id": "capstone-project-collection",
+    "description": "Smoke tests for auth and public schedules",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Signup",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"agent_signup_postman\",\n  \"password\": \"TestPass123!\",\n  \"role_id\": 4\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/signup", "host": ["{{baseUrl}}"], "path": ["api","auth","signup"] }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"agent_signup_postman\",\n  \"password\": \"TestPass123!\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }
+      }
+    },
+    {
+      "name": "Get Current User",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api","auth","me"] }
+      }
+    },
+    {
+      "name": "Public Schedules",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/public/schedules", "host": ["{{baseUrl}}"], "path": ["api","public","schedules"] }
+      }
+    }
+  ]
+}

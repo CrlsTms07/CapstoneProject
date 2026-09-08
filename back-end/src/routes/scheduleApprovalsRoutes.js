@@ -22,8 +22,10 @@ router.use(authenticateUser);
 router.get("/", getApprovals);
 router.get("/:id", getApproval);
 
-// Create/Update/Delete approvals - Super Administrator only
-router.post("/", authorizeRoles(1), createApprovalRecord);
+// Create approvals (submit) - Admin, Grade Level Chairperson, Master Teacher
+router.post("/", authorizeRoles(1, 2, 3), createApprovalRecord);
+
+// Update/Delete approvals (approve/reject) - Admin only
 router.put("/:id", authorizeRoles(1), updateApprovalRecord);
 router.delete("/:id", authorizeRoles(1), deleteApprovalRecord);
 

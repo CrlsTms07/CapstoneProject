@@ -3,6 +3,27 @@ const pool = require("../config/database");
 // GET all schedules
 const getSchedules = async (req, res) => {
     try {
+        // If the logged-in user is a Teacher (role_id 4), return only their schedules
+        if (req.session && req.session.user && req.session.user.role_id === 4) {
+            const userId = req.session.user.user_id;
+            const teacherRes = await pool.query(
+                `SELECT teacher_id FROM teachers WHERE user_id = $1 LIMIT 1`,
+                [userId]
+            );
+
+            if (teacherRes.rows.length === 0) {
+                return res.status(200).json([]);
+            }
+
+            const teacherId = teacherRes.rows[0].teacher_id;
+            const result = await pool.query(
+                `SELECT * FROM schedules WHERE teacher_id = $1 ORDER BY schedule_id`,
+                [teacherId]
+            );
+
+            return res.status(200).json(result.rows);
+        }
+
         const result = await pool.query(`
             SELECT *
             FROM schedules
@@ -25,11 +46,7 @@ const getScheduleById = async (req, res) => {
         const { id } = req.params;
 
         const result = await pool.query(
-            `
-            SELECT *
-            FROM schedules
-            WHERE schedule_id = $1
-            `,
+            `SELECT * FROM schedules WHERE schedule_id = $1`,
             [id]
         );
 
@@ -39,7 +56,27 @@ const getScheduleById = async (req, res) => {
             });
         }
 
-        res.status(200).json(result.rows[0]);
+        const schedule = result.rows[0];
+
+        // If the logged-in user is a Teacher, ensure they can only view their own schedule
+        if (req.session && req.session.user && req.session.user.role_id === 4) {
+            const userId = req.session.user.user_id;
+            const teacherRes = await pool.query(
+                `SELECT teacher_id FROM teachers WHERE user_id = $1 LIMIT 1`,
+                [userId]
+            );
+
+            if (teacherRes.rows.length === 0) {
+                return res.status(403).json({ error: "Access denied." });
+            }
+
+            const teacherId = teacherRes.rows[0].teacher_id;
+            if (schedule.teacher_id !== teacherId) {
+                return res.status(403).json({ error: "Access denied." });
+            }
+        }
+
+        res.status(200).json(schedule);
     } catch (error) {
         console.error("Error fetching schedule:", error);
 
@@ -61,6 +98,16 @@ const createSchedule = async (req, res) => {
             day_of_week,
             status
         } = req.body;
+
+        // Determine effective status based on creator role
+        let effectiveStatus = status;
+        const creatorRoleId = req.session && req.session.user && req.session.user.role_id;
+        const creatorUserId = req.session && req.session.user && req.session.user.user_id;
+
+        // If Grade Level Chairperson (2) or Master Teacher (3) create schedule, mark as pending
+        if (creatorRoleId === 2 || creatorRoleId === 3) {
+            effectiveStatus = 'pending';
+        }
 
         // Check for existing schedules on the same day and time slot
         const conflictResult = await pool.query(
@@ -150,11 +197,26 @@ const createSchedule = async (req, res) => {
                 room_id,
                 time_slot_id,
                 day_of_week,
-                status
+                effectiveStatus
             ]
         );
 
-        res.status(201).json(result.rows[0]);
+        const created = result.rows[0];
+
+        // If created as pending, insert an approval record noting the submission
+        if (created.status === 'pending') {
+            try {
+                await pool.query(
+                    `INSERT INTO schedule_approvals (schedule_id, action, performed_by) VALUES ($1, $2, $3)`,
+                    [created.schedule_id, 'pending', creatorUserId || null]
+                );
+            } catch (err) {
+                console.error('Failed to create approval record for pending schedule:', err);
+                // Non-fatal: keep the schedule but inform caller
+            }
+        }
+
+        res.status(201).json(created);
 
     } catch (error) {
         console.error("Error creating schedule:", error);

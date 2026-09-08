@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
@@ -7,24 +8,22 @@ require("dotenv").config();
 
 // Database
 const pool = require("./src/config/database");
-
-// Routes
-const rolesRoutes = require("./src/routes/rolesRoutes");
-const departmentsRoutes = require("./src/routes/departmentsRoutes");
-const gradeLevelsRoutes = require("./src/routes/gradeLevelsRoutes");
-const buildingsRoutes = require("./src/routes/buildingsRoutes");
-const roomsRoutes = require("./src/routes/roomsRoutes");
-const teachersRoutes = require("./src/routes/teachersRoutes");
-const subjectsRoutes = require("./src/routes/subjectsRoutes");
-const sectionsRoutes = require("./src/routes/sectionsRoutes");
-const timeSlotsRoutes = require("./src/routes/timeSlotsRoutes");
-const schedulesRoutes = require("./src/routes/schedulesRoutes");
-const scheduleApprovalsRoutes = require("./src/routes/scheduleApprovalsRoutes");
-const teacherTasksRoutes = require("./src/routes/teacherTasksRoutes");
-const usersRoutes = require("./src/routes/usersRoutes");
-const authRoutes = require("./src/routes/authRoutes");
-
 const app = express();
+
+// Ensure users table has is_approved column for signup approval workflow
+;(async () => {
+    try {
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT FALSE`);
+        console.log('✅ Ensured users.is_approved column exists');
+    } catch (err) {
+        console.error('Failed to ensure is_approved column:', err.message || err);
+    }
+})();
+
+// Routes (centralized)
+const routes = require("./src/routes");
+
+
 
 // =========================
 // Middleware
@@ -65,33 +64,25 @@ app.use(
 // Routes
 // =========================
 
-app.use("/api/roles", rolesRoutes);
+// Public endpoints first (no auth required)
+app.use("/api/public/schedules", routes.publicSchedulesRoutes);
+app.use("/api/roles/public", routes.publicRolesRoutes);
 
-app.use("/api/departments", departmentsRoutes);
-
-app.use("/api/grade-levels", gradeLevelsRoutes);
-
-app.use("/api/buildings", buildingsRoutes);
-
-app.use("/api/rooms", roomsRoutes);
-
-app.use("/api/teachers", teachersRoutes);
-
-app.use("/api/subjects", subjectsRoutes);
-
-app.use("/api/sections", sectionsRoutes);
-
-app.use("/api/time-slots", timeSlotsRoutes);
-
-app.use("/api/schedules", schedulesRoutes);
-
-app.use("/api/schedule-approvals", scheduleApprovalsRoutes);
-
-app.use("/api/teacher-tasks", teacherTasksRoutes);
-
-app.use("/api/users", usersRoutes);
-
-app.use("/api/auth", authRoutes);
+// Protected endpoints (auth required)
+app.use("/api/roles", routes.rolesRoutes);
+app.use("/api/departments", routes.departmentsRoutes);
+app.use("/api/grade-levels", routes.gradeLevelsRoutes);
+app.use("/api/buildings", routes.buildingsRoutes);
+app.use("/api/rooms", routes.roomsRoutes);
+app.use("/api/teachers", routes.teachersRoutes);
+app.use("/api/subjects", routes.subjectsRoutes);
+app.use("/api/sections", routes.sectionsRoutes);
+app.use("/api/time-slots", routes.timeSlotsRoutes);
+app.use("/api/schedules", routes.schedulesRoutes);
+app.use("/api/schedule-approvals", routes.scheduleApprovalsRoutes);
+app.use("/api/teacher-tasks", routes.teacherTasksRoutes);
+app.use("/api/users", routes.usersRoutes);
+app.use("/api/auth", routes.authRoutes);
 
 // =========================
 // Test Route
@@ -129,6 +120,14 @@ app.get("/api/test-db", async (req, res) => {
 // =========================
 // Start Server
 // =========================
+
+// Serve static files from front-end dist folder
+app.use(express.static(path.join(__dirname, '../front-end/dist')));
+
+// Catch-all route for SPA - must be after all API routes
+app.get(/.*/i, (req, res) => {
+    res.sendFile(path.join(__dirname, '../front-end/dist/index.html'));
+});
 
 const PORT = process.env.PORT || 5000;
 

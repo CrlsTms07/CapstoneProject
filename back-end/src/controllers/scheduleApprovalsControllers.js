@@ -5,6 +5,7 @@ const {
     updateApproval,
     deleteApproval
 } = require("../models/scheduleApprovalsModel");
+const pool = require("../config/database");
 
 // GET all approvals
 const getApprovals = async (req, res) => {
@@ -110,6 +111,19 @@ const updateApprovalRecord = async (req, res) => {
             return res.status(404).json({
                 error: "Schedule approval not found"
             });
+        }
+
+        // If this update represents an Admin approval/rejection, update schedule status accordingly
+        // Only update schedule status for explicit 'approve'/'approved' or 'reject'/'rejected' actions
+        const normalized = (action || '').toString().toLowerCase();
+        try {
+            if (normalized === 'approve' || normalized === 'approved') {
+                await pool.query(`UPDATE schedules SET status = $1 WHERE schedule_id = $2`, ['scheduled', schedule_id]);
+            } else if (normalized === 'reject' || normalized === 'rejected') {
+                await pool.query(`UPDATE schedules SET status = $1 WHERE schedule_id = $2`, ['rejected', schedule_id]);
+            }
+        } catch (err) {
+            console.error('Failed to update schedule status after approval update:', err);
         }
 
         res.status(200).json(approval);

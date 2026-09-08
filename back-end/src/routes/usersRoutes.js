@@ -9,6 +9,7 @@ const {
     updateUser,
     deleteUser
 } = require("../controllers/usersControllers");
+const { getPendingUsers, approveUser } = require("../controllers/usersControllers");
 
 const {
     authenticateUser,
@@ -48,5 +49,11 @@ router.delete(
     authorizeRoles(1),
     deleteUser
 );
+
+// Pending users
+router.get('/pending', authorizeRoles(1), getPendingUsers);
+
+// Approve a pending user
+router.post('/:id/approve', authorizeRoles(1), approveUser);
 
 module.exports = router;
