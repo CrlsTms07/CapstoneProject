@@ -50,6 +50,9 @@ const initDatabase = async () => {
             CREATE TABLE IF NOT EXISTS users (
                 user_id SERIAL PRIMARY KEY,
                 username VARCHAR(100) NOT NULL UNIQUE,
+                full_name VARCHAR(150),
+                email VARCHAR(150),
+                school_id VARCHAR(50),
                 password_hash VARCHAR(255),
                 role_id INT NOT NULL,
                 department_id INT,
@@ -205,6 +208,13 @@ const initDatabase = async () => {
         `;
 
         await pool.query(createTablesSQL);
+        await pool.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(150);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS school_id VARCHAR(50);
+            CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email) WHERE email IS NOT NULL;
+            CREATE UNIQUE INDEX IF NOT EXISTS users_school_id_unique ON users (school_id) WHERE school_id IS NOT NULL;
+        `);
         console.log("✅ Tables created successfully!\n");
 
         // 2. Insert default roles

@@ -1,6 +1,6 @@
-const path = require("path");
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
 
@@ -8,22 +8,21 @@ require("dotenv").config();
 
 // Database
 const pool = require("./src/config/database");
-const app = express();
-
-// Ensure users table has is_approved column for signup approval workflow
-;(async () => {
-    try {
-        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT FALSE`);
-        console.log('✅ Ensured users.is_approved column exists');
-    } catch (err) {
-        console.error('Failed to ensure is_approved column:', err.message || err);
-    }
-})();
 
 // Routes (centralized)
 const routes = require("./src/routes");
 
+const app = express();
 
+// Ensure users table has is_approved column for signup approval workflow
+(async () => {
+    try {
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT FALSE`);
+        console.log("✅ Ensured users.is_approved column exists");
+    } catch (err) {
+        console.error("Failed to ensure is_approved column:", err.message || err);
+    }
+})();
 
 // =========================
 // Middleware
@@ -64,11 +63,6 @@ app.use(
 // Routes
 // =========================
 
-// Public endpoints first (no auth required)
-app.use("/api/public/schedules", routes.publicSchedulesRoutes);
-app.use("/api/roles/public", routes.publicRolesRoutes);
-
-// Protected endpoints (auth required)
 app.use("/api/roles", routes.rolesRoutes);
 app.use("/api/departments", routes.departmentsRoutes);
 app.use("/api/grade-levels", routes.gradeLevelsRoutes);
@@ -79,10 +73,22 @@ app.use("/api/subjects", routes.subjectsRoutes);
 app.use("/api/sections", routes.sectionsRoutes);
 app.use("/api/time-slots", routes.timeSlotsRoutes);
 app.use("/api/schedules", routes.schedulesRoutes);
+
+// Public schedules (no auth)
+app.use("/api/public/schedules", routes.publicSchedulesRoutes);
+// Public roles listing for signup/login
+app.use("/api/roles/public", routes.publicRolesRoutes);
 app.use("/api/schedule-approvals", routes.scheduleApprovalsRoutes);
+
 app.use("/api/teacher-tasks", routes.teacherTasksRoutes);
 app.use("/api/users", routes.usersRoutes);
 app.use("/api/auth", routes.authRoutes);
+
+// Serve the built frontend when running the production server.
+app.use(express.static(path.join(__dirname, "../front-end/dist")));
+app.get("/{*splat}", (req, res) => {
+    res.sendFile(path.join(__dirname, "../front-end/dist/index.html"));
+});
 
 // =========================
 // Test Route
@@ -120,14 +126,6 @@ app.get("/api/test-db", async (req, res) => {
 // =========================
 // Start Server
 // =========================
-
-// Serve static files from front-end dist folder
-app.use(express.static(path.join(__dirname, '../front-end/dist')));
-
-// Catch-all route for SPA - must be after all API routes
-app.get(/.*/i, (req, res) => {
-    res.sendFile(path.join(__dirname, '../front-end/dist/index.html'));
-});
 
 const PORT = process.env.PORT || 5000;
 

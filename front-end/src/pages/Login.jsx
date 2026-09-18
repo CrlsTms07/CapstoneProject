@@ -58,10 +58,11 @@ export default function Login({ onLogin }) {
   }, [])
 
   return (
-    <div className="login-root">
-      <div className="login-card" role="main">
+    <div className="login-root login-page">
+      <div className="auth-shell" role="main">
+        <div className="login-card">
         <div className="login-top">
-          <div className="login-icon">📘</div>
+          <div className="login-kicker">ERCIHS Vote</div>
           <h2>Welcome Back</h2>
           <p className="login-sub">Sign in to your account</p>
         </div>
@@ -114,6 +115,16 @@ export default function Login({ onLogin }) {
 
         <div className="login-footer">
           Don't have an account? <a href="/signup">Sign up</a>
+        </div>
+        </div>
+        <div className="brand-panel" aria-label="ERCIHS Vote">
+          <img className="brand-logo" src="https://vote.ercihs.edu.ph/ERCIHS%20LOGO.png" alt="ERCIHS Logo" />
+          <div className="brand-copy">
+            <span className="brand-eyebrow">Learner Government Commission</span>
+            <h1>ERCIHS Vote</h1>
+            <p>Secure <span>•</span> Transparent <span>•</span> Reliable</p>
+            <small>EMMANUEL RESURRECCION CONGRESSIONAL INTEGRATED HIGH SCHOOL</small>
+          </div>
         </div>
       </div>
     </div>

@@ -68,8 +68,13 @@ CREATE TABLE buildings (
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
+    full_name VARCHAR(150),
+    email VARCHAR(150) UNIQUE,
+    school_id VARCHAR(50) UNIQUE,
+    password_hash VARCHAR(255),
     role_id INT NOT NULL,
     department_id INT,
+    is_approved BOOLEAN DEFAULT FALSE,
 
     CONSTRAINT fk_user_role
         FOREIGN KEY (role_id)

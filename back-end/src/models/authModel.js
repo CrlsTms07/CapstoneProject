@@ -1,20 +1,24 @@
 const pool = require("../config/database");
 
-// Find user by username
-const findUserByUsername = async (username) => {
+// Find a user by school email, with username fallback for existing admin accounts.
+const findUserByEmail = async (email) => {
     const result = await pool.query(
         `
         SELECT
             u.user_id,
             u.username,
+            u.full_name,
+            u.email,
+            u.school_id,
             u.password_hash,
             u.role_id,
             r.role_name,
-            u.department_id
+            u.department_id,
+            u.is_approved
         FROM users u
         LEFT JOIN roles r
             ON u.role_id = r.role_id
-        WHERE u.username = $1
+        WHERE u.email = $1 OR u.username = $1
         LIMIT 1
         `,
         [username]
@@ -24,5 +28,6 @@ const findUserByUsername = async (username) => {
 };
 
 module.exports = {
-    findUserByUsername
+    findUserByEmail,
+    findUserByUsername: findUserByEmail
 };

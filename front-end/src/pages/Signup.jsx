@@ -75,10 +75,20 @@ export default function Signup() {
   }
 
   return (
-    <div className="login-root">
-      <div className="login-card" role="main">
+    <div className="login-root signup-page">
+      <div className="auth-shell" role="main">
+        <div className="brand-panel" aria-label="ERCIHS Vote">
+          <img className="brand-logo" src="https://vote.ercihs.edu.ph/ERCIHS%20LOGO.png" alt="ERCIHS Logo" />
+          <div className="brand-copy">
+            <span className="brand-eyebrow">Learner Government Commission</span>
+            <h1>ERCIHS Vote</h1>
+            <p>Secure <span>•</span> Transparent <span>•</span> Reliable</p>
+            <small>EMMANUEL RESURRECCION CONGRESSIONAL INTEGRATED HIGH SCHOOL</small>
+          </div>
+        </div>
+        <div className="login-card">
         <div className="login-top">
-          <div className="login-icon">🆕</div>
+          <div className="login-kicker">ERCIHS Vote</div>
           <h2>Create Account</h2>
           <p className="login-sub">Register for an account</p>
         </div>
@@ -103,6 +113,7 @@ export default function Signup() {
         </form>
 
         <div className="login-footer">Already have an account? <a href="/login">Sign in</a></div>
+        </div>
       </div>
     </div>
   )
