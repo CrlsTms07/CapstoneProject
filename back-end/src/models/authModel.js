@@ -21,7 +21,7 @@ const findUserByEmail = async (email) => {
         WHERE u.email = $1 OR u.username = $1
         LIMIT 1
         `,
-        [username]
+        [email]
     );
 
     return result.rows[0];

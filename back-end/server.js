@@ -63,6 +63,8 @@ app.use(
 // Routes
 // =========================
 
+// Public roles must be registered before the authenticated /api/roles router.
+app.use("/api/roles/public", routes.publicRolesRoutes);
 app.use("/api/roles", routes.rolesRoutes);
 app.use("/api/departments", routes.departmentsRoutes);
 app.use("/api/grade-levels", routes.gradeLevelsRoutes);
@@ -76,8 +78,6 @@ app.use("/api/schedules", routes.schedulesRoutes);
 
 // Public schedules (no auth)
 app.use("/api/public/schedules", routes.publicSchedulesRoutes);
-// Public roles listing for signup/login
-app.use("/api/roles/public", routes.publicRolesRoutes);
 app.use("/api/schedule-approvals", routes.scheduleApprovalsRoutes);
 
 app.use("/api/teacher-tasks", routes.teacherTasksRoutes);

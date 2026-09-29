@@ -8,14 +8,33 @@ const getRoles = async (req, res) => {
             FROM roles
             ORDER BY role_id
         `);
-
         res.json(result.rows);
     } catch (error) {
         console.error("Error fetching roles:", error);
-
         res.status(500).json({
             error: "Failed to fetch roles"
         });
+    }
+};
+
+// GET roles available to unauthenticated login and signup forms
+const getPublicRoles = async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT *
+            FROM roles
+            WHERE LOWER(role_name) IN ('grade level chairperson', 'master teacher', 'teacher')
+            ORDER BY CASE LOWER(role_name)
+                WHEN 'grade level chairperson' THEN 1
+                WHEN 'master teacher' THEN 2
+                WHEN 'teacher' THEN 3
+            END
+        `);
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Error fetching public roles:", error);
+        res.status(500).json({ error: "Failed to fetch public roles" });
     }
 };
 
@@ -23,7 +42,6 @@ const getRoles = async (req, res) => {
 const getRoleById = async (req, res) => {
     try {
         const { id } = req.params;
-
         const result = await pool.query(
             `SELECT * FROM roles WHERE role_id = $1`,
             [id]
@@ -148,6 +166,7 @@ const deleteRole = async (req, res) => {
 
 module.exports = {
     getRoles,
+    getPublicRoles,
     getRoleById,
     createRole,
     updateRole,

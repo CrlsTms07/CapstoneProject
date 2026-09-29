@@ -81,104 +81,144 @@ export default function PublicView(){
 
   return (
     <div className="pv-root">
+      <div className="pv-utility">
+        <div>REPUBLIC OF THE PHILIPPINES</div>
+        <div className="pv-utility-links"><span>Official Website</span><span>DepEd CALABARZON</span></div>
+      </div>
+
       <header className="pv-header">
-        <div className="pv-brand">
-          <div className="pv-logo">📘</div>
+        <a className="pv-brand" href="/" aria-label="ERCIHS home">
+          <img className="pv-logo" src="https://vote.ercihs.edu.ph/ERCIHS%20LOGO.png" alt="ERCIHS logo" />
           <div>
-            <div className="pv-title">ERCIHS</div>
-            <div className="pv-sub">Class Scheduling System — S.Y. 2026-2027</div>
+            <div className="pv-title">Emmanuel Resurreccion Congressional Integrated High School</div>
+            <div className="pv-sub">City of Dasmarinas, Cavite</div>
           </div>
-        </div>
-        <div>
-          <a href="/login" className="pv-staff-btn">Staff Login</a>
-        </div>
+        </a>
+        <a href="/login" className="pv-staff-btn">Staff Login</a>
       </header>
 
-      <main className="pv-main">
-        <div className="pv-hero">
-          <h1>Class Schedule</h1>
-          <p>View class schedules by department, grade level, and section.</p>
-        </div>
+      <main id="home" className="pv-main">
+        <section className="pv-hero">
+          <div className="pv-hero-copy">
+            <span className="pv-eyebrow">EMMANUEL RESURRECCION CONGRESSIONAL INTEGRATED HIGH SCHOOL</span>
+            <h1>Official School Information Portal</h1>
+            <p>Access the class schedule and essential information of Emmanuel Resurreccion Congressional Integrated High School.</p>
+            <a className="pv-hero-btn" href="#schedule">Class Schedule</a>
+          </div>
+          <div className="pv-hero-mark" aria-hidden="true">ERCIHS</div>
+        </section>
 
-        <section className="pv-filters">
-          <div className="pv-filter-card">
-            <div className="pv-filter-row">
-              <div>
-                <label>Department</label>
-                <select value={filters.department_id} onChange={e => setFilters(f => ({...f, department_id: e.target.value}))}>
-                  <option value="">All</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label>Grade Level</label>
-                <select value={filters.grade_level_id} onChange={e => setFilters(f => ({...f, grade_level_id: e.target.value}))}>
-                  <option value="">All</option>
-                  {gradeLevels.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </div>
-              <div>
-                <label>Section</label>
-                <select value={filters.section_id} onChange={e => setFilters(f => ({...f, section_id: e.target.value}))}>
-                  <option value="">All</option>
-                  {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label>Day</label>
-                <select value={filters.day} onChange={e => setFilters(f => ({...f, day: e.target.value}))}>
-                  <option value="">All</option>
-                  {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
+        <section id="about" className="pv-welcome">
+          <div>
+            <span className="pv-eyebrow">SCHOOL INFORMATION</span>
+            <h2>Emmanuel Resurreccion Congressional Integrated High School</h2>
+          </div>
+          <p>Find class schedules by department, grade level, section, and day. This public view keeps essential school information easy to access for learners, families, and the community.</p>
+        </section>
+
+        <section id="schedule" className="pv-schedule-section">
+          <div className="pv-section-heading">
+            <div>
+              <span className="pv-eyebrow">ACADEMIC SERVICES</span>
+              <h2>Class Schedule</h2>
+            </div>
+            <span className="pv-school-year">School Year 2026-2027</span>
+          </div>
+
+          <section className="pv-filters">
+            <div className="pv-filter-card">
+              <div className="pv-filter-row">
+                <div>
+                  <label>Department</label>
+                  <select value={filters.department_id} onChange={e => setFilters(f => ({...f, department_id: e.target.value}))}>
+                    <option value="">All departments</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label>Grade Level</label>
+                  <select value={filters.grade_level_id} onChange={e => setFilters(f => ({...f, grade_level_id: e.target.value}))}>
+                    <option value="">All grade levels</option>
+                    {gradeLevels.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label>Section</label>
+                  <select value={filters.section_id} onChange={e => setFilters(f => ({...f, section_id: e.target.value}))}>
+                    <option value="">All sections</option>
+                    {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label>Day</label>
+                  <select value={filters.day} onChange={e => setFilters(f => ({...f, day: e.target.value}))}>
+                    <option value="">All days</option>
+                    {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="pv-results">
-          <div className="pv-results-card">
-            {loading && <div className="pv-loading">Loading schedules…</div>}
-            {error && <div className="pv-error">{error}</div>}
-            {!loading && !error && filtered.length === 0 && (
-              <div className="pv-empty">No schedules found for selected filters.</div>
-            )}
+          <section className="pv-results">
+            <div className="pv-results-card">
+              {loading && <div className="pv-loading">Loading schedules...</div>}
+              {error && <div className="pv-error">{error}</div>}
+              {!loading && !error && filtered.length === 0 && (
+                <div className="pv-empty">No schedules found for selected filters.</div>
+              )}
 
-            {!loading && !error && filtered.length > 0 && (
-              <div className="pv-grid-wrapper">
-                <table className="pv-grid">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      {DAYS.map(d => <th key={d}>{d}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {times.map(time => (
-                      <tr key={time}>
-                        <td className="pv-time-cell">{time.replace(':00','')}</td>
-                        {DAYS.map(day => (
-                          <td key={day} className="pv-day-cell">
-                            {grid[time] && grid[time][day] ? (
-                              grid[time][day].map((s, idx) => (
-                                <div key={idx} className="pv-schedule-card">
-                                  <div className="pv-subject">{s.subject_name || s.subject || 'Subject'}</div>
-                                  <div className="pv-meta">{s.teacher_last_name ? `Teacher: ${s.teacher_last_name}` : (s.teacher_name || '')}</div>
-                                  <div className="pv-meta">Room: {s.room_number || s.room_id || '—'}</div>
-                                  <div className="pv-meta small">Section: {s.section_name || s.section_id}</div>
-                                </div>
-                              ))
-                            ) : null}
-                          </td>
-                        ))}
+              {!loading && !error && filtered.length > 0 && (
+                <div className="pv-grid-wrapper">
+                  <table className="pv-grid">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        {DAYS.map(d => <th key={d}>{d}</th>)}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                    </thead>
+                    <tbody>
+                      {times.map(time => (
+                        <tr key={time}>
+                          <td className="pv-time-cell">{time.replace(':00','')}</td>
+                          {DAYS.map(day => (
+                            <td key={day} className="pv-day-cell">
+                              {grid[time] && grid[time][day] ? (
+                                grid[time][day].map((s, idx) => (
+                                  <div key={idx} className="pv-schedule-card">
+                                    <div className="pv-subject">{s.subject_name || s.subject || 'Subject'}</div>
+                                    <div className="pv-meta">{s.teacher_last_name ? `Teacher: ${s.teacher_last_name}` : (s.teacher_name || '')}</div>
+                                    <div className="pv-meta">Room: {s.room_number || s.room_id || '-'}</div>
+                                    <div className="pv-meta small">Section: {s.section_name || s.section_id}</div>
+                                  </div>
+                                ))
+                              ) : null}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </section>
         </section>
       </main>
+
+      <footer id="contact" className="pv-footer">
+        <div className="pv-footer-main">
+          <div>
+            <div className="pv-footer-brand">EMMANUEL RESURRECCION CONGRESSIONAL INTEGRATED HIGH SCHOOL</div>
+            <p>Poinsettia St., Via Verde Village, Brgy. San Agustin II, City of Dasmarinas, Cavite 4114</p>
+          </div>
+          <div>
+            <div className="pv-footer-heading">SCHOOL OFFICE</div>
+            <p>301179@deped.gov.ph<br />(046) 894-1463 / (046) 472-9768</p>
+          </div>
+        </div>
+        <div className="pv-footer-bottom">© 2026 ERCIHS Web Development Team <span>Official school information portal</span></div>
+      </footer>
     </div>
   )
 }

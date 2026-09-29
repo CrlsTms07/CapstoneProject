@@ -219,51 +219,66 @@ const initDatabase = async () => {
 
         // 2. Insert default roles
         console.log("📌 Inserting default roles...");
+        await pool.query(`
+            UPDATE roles
+            SET role_name = 'Guest'
+            WHERE LOWER(role_name) = 'student'
+              AND NOT EXISTS (
+                  SELECT 1 FROM roles WHERE LOWER(role_name) = 'guest'
+              )
+        `);
+
         const rolesData = [
-            { role_id: 1, role_name: 'Admin' },
-            { role_id: 2, role_name: 'Chair' },
-            { role_id: 3, role_name: 'Master Teacher' },
-            { role_id: 4, role_name: 'Teacher' }
+            'Admin',
+            'Grade Level Chairperson',
+            'Master Teacher',
+            'Teacher'
         ];
 
-        for (const role of rolesData) {
+        for (const role_name of rolesData) {
             await pool.query(
-                `INSERT INTO roles (role_id, role_name) 
-                 VALUES ($1, $2)
-                 ON CONFLICT (role_id) DO NOTHING`,
-                [role.role_id, role.role_name]
+                `INSERT INTO roles (role_name)
+                 VALUES ($1)
+                 ON CONFLICT (role_name) DO NOTHING`,
+                [role_name]
             );
         }
         console.log("✅ Default roles inserted!\n");
 
         // 3. Create admin user
         console.log("👤 Creating admin account...");
-        const adminUsername = "admin";
-        const adminPassword = "admin123"; // Default password - CHANGE THIS IN PRODUCTION!
+        const adminUsername = process.env.ADMIN_USERNAME;
+        const adminEmail = process.env.ADMIN_EMAIL;
+        const adminPassword = process.env.ADMIN_PASSWORD;
+
+        if (!adminUsername || !adminEmail || !adminPassword) {
+            throw new Error("ADMIN_USERNAME, ADMIN_EMAIL and ADMIN_PASSWORD must be configured in .env");
+        }
         
         const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
         const result = await pool.query(
-            `INSERT INTO users (username, password_hash, role_id, is_approved)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (username) DO NOTHING
-             RETURNING user_id, username, role_id`,
-            [adminUsername, hashedPassword, 1, true]
+            `INSERT INTO users (username, full_name, email, school_id, password_hash, role_id, is_approved)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (username) DO UPDATE SET
+                 full_name = EXCLUDED.full_name,
+                 email = EXCLUDED.email,
+                 school_id = EXCLUDED.school_id,
+                 password_hash = EXCLUDED.password_hash,
+                 role_id = EXCLUDED.role_id,
+                 is_approved = EXCLUDED.is_approved
+             RETURNING user_id, username, email, role_id`,
+            [adminUsername, "System Administrator", adminEmail, "ADMIN-001", hashedPassword, 1, true]
         );
 
-        if (result.rows.length > 0) {
-            console.log("✅ Admin account created successfully!");
-            console.log(`   Username: ${adminUsername}`);
-            console.log(`   Password: ${adminPassword}`);
-            console.log("   ⚠️  IMPORTANT: Change this password after first login!\n");
-        } else {
-            console.log("ℹ️  Admin account already exists\n");
-        }
+        console.log("✅ Secure admin account is ready.");
+        console.log(`   Login email: ${result.rows[0].email}`);
+        console.log("   Password: read ADMIN_PASSWORD from back-end/.env\n");
 
         console.log("🎉 Database initialization completed successfully!");
         console.log("\n📝 You can now login with:");
-        console.log(`   Username: ${adminUsername}`);
-        console.log(`   Password: ${adminPassword}\n`);
+        console.log(`   Login email: ${adminEmail}`);
+        console.log("   Password: read ADMIN_PASSWORD from back-end/.env\n");
 
         process.exit(0);
     } catch (error) {

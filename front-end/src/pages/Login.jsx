@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/login.css'
 
 export default function Login({ onLogin }) {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState(() => localStorage.getItem('rememberedSchoolEmail') || '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(false)
-  const [roles, setRoles] = useState([])
-  const [selectedRole, setSelectedRole] = useState(null)
   const navigate = useNavigate()
 
   const doLogin = async (e) => {
     e.preventDefault()
     setError(null)
+    setSuccess(null)
     setLoading(true)
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, role_id: selectedRole })
+        body: JSON.stringify({ username: email, password, remember })
       })
 
       if (!res.ok) {
@@ -33,9 +33,13 @@ export default function Login({ onLogin }) {
       }
 
       const d = await res.json()
-      if (onLogin) onLogin(d.user)
-      // role-based routing handled by App effect
-      navigate('/')
+      if (remember) localStorage.setItem('rememberedSchoolEmail', email)
+      else localStorage.removeItem('rememberedSchoolEmail')
+      setSuccess('Login successful. Redirecting...')
+      setTimeout(() => {
+        if (onLogin) onLogin(d.user)
+        navigate('/')
+      }, 700)
     } catch (err) {
       setError('Login error')
     } finally {
@@ -43,45 +47,34 @@ export default function Login({ onLogin }) {
     }
   }
 
-  useEffect(() => {
-    const fetchRoles = async () => {
-      try {
-        const r = await fetch('/api/roles/public')
-        if (!r.ok) return
-        const data = await r.json()
-        setRoles(data)
-        if (data && data.length > 0) setSelectedRole(data[0].role_id)
-      } catch (err) {}
-    }
-
-    fetchRoles()
-  }, [])
-
   return (
     <div className="login-root login-page">
       <div className="auth-shell" role="main">
         <div className="login-card">
         <div className="login-top">
-          <div className="login-kicker">ERCIHS Vote</div>
           <h2>Welcome Back</h2>
           <p className="login-sub">Sign in to your account</p>
         </div>
 
         {error && <div className="login-error" role="alert">{error}</div>}
+        {success && <div className="login-success" role="status">{success}</div>}
 
         <form className="login-form" onSubmit={doLogin}>
-          <label className="login-label">Username</label>
+          <label className="login-label" htmlFor="login-email">School email address</label>
           <input
+            id="login-email"
             className="login-input"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            autoComplete="username"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            autoComplete="email"
             required
           />
 
-          <label className="login-label">Password</label>
+          <label className="login-label" htmlFor="login-password">Password</label>
           <div className="login-password-row">
             <input
+              id="login-password"
               className="login-input"
               type={showPassword ? 'text' : 'password'}
               value={password}
@@ -90,16 +83,9 @@ export default function Login({ onLogin }) {
               required
             />
             <button type="button" className="show-btn" onClick={() => setShowPassword(s => !s)} aria-label="Toggle password">
-              {showPassword ? 'Hide' : 'Show'}
+              <span aria-hidden="true">👁</span>
             </button>
           </div>
-
-          <label className="login-label">Role</label>
-          <select className="login-input" value={selectedRole || ''} onChange={e => setSelectedRole(e.target.value)}>
-            {roles.map(r => (
-              <option key={r.role_id} value={r.role_id}>{r.role_name}</option>
-            ))}
-          </select>
 
           <div className="login-row">
             <label className="remember">
@@ -115,13 +101,13 @@ export default function Login({ onLogin }) {
 
         <div className="login-footer">
           Don't have an account? <a href="/signup">Sign up</a>
+          <a className="guest-btn" href="/">Continue as Guest</a>
         </div>
         </div>
-        <div className="brand-panel" aria-label="ERCIHS Vote">
+        <div className="brand-panel" aria-label="School branding">
           <img className="brand-logo" src="https://vote.ercihs.edu.ph/ERCIHS%20LOGO.png" alt="ERCIHS Logo" />
           <div className="brand-copy">
             <span className="brand-eyebrow">Learner Government Commission</span>
-            <h1>ERCIHS Vote</h1>
             <p>Secure <span>•</span> Transparent <span>•</span> Reliable</p>
             <small>EMMANUEL RESURRECCION CONGRESSIONAL INTEGRATED HIGH SCHOOL</small>
           </div>

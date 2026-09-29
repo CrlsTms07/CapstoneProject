@@ -58,7 +58,7 @@ function App() {
     <Routes>
       <Route path="/" element={<PublicView />} />
       <Route path="/login" element={<Login onLogin={setUser} />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route path="/signup" element={<Signup onLogin={setUser} />} />
       <Route path="/forgot" element={<ForgotPassword />} />
       <Route path="/admin" element={<AdminDashboard user={user} />} />
       <Route path="/chair" element={<ChairDashboard user={user} />} />

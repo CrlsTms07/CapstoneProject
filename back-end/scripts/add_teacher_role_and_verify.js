@@ -94,9 +94,9 @@ const run = async () => {
       console.log(`Teacher test login verification: ${ok ? 'OK' : 'FAILED'}`);
     }
 
-    // Confirm Student/Guest is not a login role
-    const studentRole = await pool.query("SELECT role_id FROM roles WHERE role_name = 'Student' OR role_name = 'Guest' LIMIT 1");
-    console.log('\nStudent/Guest role present?', studentRole.rows.length > 0);
+    // Confirm Guest is not a signup role
+    const guestRole = await pool.query("SELECT role_id FROM roles WHERE role_name = 'Guest' LIMIT 1");
+    console.log('\nGuest role present?', guestRole.rows.length > 0);
 
     console.log('\nDone. Minimal changes applied: added Teacher role if missing; created test users only when needed.');
     process.exit(0);

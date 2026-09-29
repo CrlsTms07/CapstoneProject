@@ -8,7 +8,7 @@ const resetTokens = new Map();
 // LOGIN
 const login = async (req, res) => {
     try {
-        const { username, password, role_id } = req.body;
+        const { username, password, remember } = req.body;
 
         // Validate input
         if (!username || !password) {
@@ -17,8 +17,8 @@ const login = async (req, res) => {
             });
         }
 
-        // Find user
-        const user = await findUserByUsername(username);
+        // Find user by the school email supplied by the login form.
+        const user = await findUserByUsername(username.trim().toLowerCase());
 
         // Generic authentication error
         if (!user || !user.password_hash) {
@@ -44,11 +44,6 @@ const login = async (req, res) => {
             });
         }
 
-        // If client sent a selected role_id, ensure it matches the user's role
-        if (role_id !== undefined && Number(role_id) !== Number(user.role_id)) {
-            return res.status(403).json({ error: "Selected role does not match account role." });
-        }
-
         // Regenerate session ID after successful authentication
         await new Promise((resolve, reject) => {
             req.session.regenerate((error) => {
@@ -59,6 +54,8 @@ const login = async (req, res) => {
                 }
             });
         });
+
+        req.session.cookie.maxAge = remember ? 1000 * 60 * 60 * 24 * 30 : null;
 
         // Store authenticated user in session
         req.session.user = {
@@ -139,28 +136,43 @@ const logout = (req, res) => {
 // SIGNUP (public)
 const signup = async (req, res) => {
     try {
-        const { username, password, role_id, department_id } = req.body;
+        const { full_name, email, school_id, password, confirm_password, role_id, department_id } = req.body;
 
-        // Basic validation
-        if (!username || !password || !role_id) {
-            return res.status(400).json({ error: "username, password and role_id are required." });
+        if (!full_name || !email || !school_id || !password || !confirm_password || !role_id) {
+            return res.status(400).json({ error: "Full name, school email, ID number, role, password and password confirmation are required." });
         }
 
-        // Prevent public creation of Admin
-        if (Number(role_id) === 1) {
-            return res.status(403).json({ error: "Cannot assign Admin role during signup." });
+        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedSchoolId = school_id.trim();
+        const passwordIsStrong = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
+
+        if (!passwordIsStrong) {
+            return res.status(400).json({ error: "Password must be at least 8 characters and include an uppercase letter, number and special character." });
         }
 
-        // Ensure role exists
-        const roleRes = await pool.query('SELECT role_id FROM roles WHERE role_id = $1 LIMIT 1', [role_id]);
+        if (password !== confirm_password) {
+            return res.status(400).json({ error: "Passwords do not match." });
+        }
+
+        const roleRes = await pool.query(
+            `SELECT role_id, role_name
+             FROM roles
+             WHERE role_id = $1
+               AND LOWER(role_name) IN ('grade level chairperson', 'master teacher', 'teacher')
+             LIMIT 1`,
+            [role_id]
+        );
         if (roleRes.rows.length === 0) {
-            return res.status(400).json({ error: "Invalid role_id." });
+            return res.status(400).json({ error: "Invalid signup role." });
         }
+        const selectedRole = roleRes.rows[0];
 
-        // Unique username
-        const existing = await pool.query('SELECT user_id FROM users WHERE username = $1 LIMIT 1', [username]);
+        const existing = await pool.query(
+            'SELECT user_id FROM users WHERE LOWER(email) = $1 OR school_id = $2 LIMIT 1',
+            [normalizedEmail, normalizedSchoolId]
+        );
         if (existing.rows.length > 0) {
-            return res.status(409).json({ error: "Username already exists." });
+            return res.status(409).json({ error: "The school email or ID number is already registered." });
         }
 
         // Hash password
@@ -171,10 +183,10 @@ const signup = async (req, res) => {
 
         // Insert user (include password_hash)
         const insertRes = await pool.query(
-            `INSERT INTO users (username, role_id, department_id, password_hash, is_approved)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING user_id, username, role_id, department_id, is_approved`,
-            [username, role_id, department_id || null, hash, isApproved]
+            `INSERT INTO users (username, full_name, email, school_id, role_id, department_id, password_hash, is_approved)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING user_id, username, full_name, email, school_id, role_id, department_id, is_approved`,
+            [normalizedEmail, full_name.trim(), normalizedEmail, normalizedSchoolId, role_id, department_id || null, hash, isApproved]
         );
 
         const user = insertRes.rows[0];
@@ -192,7 +204,7 @@ const signup = async (req, res) => {
                 user_id: user.user_id,
                 username: user.username,
                 role_id: user.role_id,
-                role_name: null,
+                role_name: selectedRole.role_name,
                 department_id: user.department_id
             };
 
