@@ -1,3 +1,5 @@
+// HIPO 3.4 – Manage Section (school structure)
+// Routes: /api/grade-levels (CRUD). NOTE: no authentication middleware yet (audit P0).
 const express = require("express");
 
 const {
@@ -6,7 +8,7 @@ const {
     createGradeLevel,
     updateGradeLevel,
     deleteGradeLevel
-} = require("../controllers/gradeLevelsControllers");
+} = require("./gradeLevels.controller");
 
 const router = express.Router();
 

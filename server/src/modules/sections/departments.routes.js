@@ -1,3 +1,5 @@
+// HIPO 3.4 – Manage Section (school structure)
+// Routes: /api/departments (CRUD). NOTE: no authentication middleware yet (audit P0).
 const express = require("express");
 
 const {
@@ -6,7 +8,7 @@ const {
   createDepartment,
   updateDepartment,
   deleteDepartment,
-} = require("../controllers/departmentsControllers");
+} = require("./departments.controller");
 
 const router = express.Router();
 

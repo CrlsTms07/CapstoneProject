@@ -1,3 +1,5 @@
+// HIPO 3.4 – Manage Section
+// Routes: /api/sections (CRUD). NOTE: no authentication middleware yet (audit P0).
 const express = require("express");
 
 const {
@@ -6,7 +8,7 @@ const {
     createSection,
     updateSection,
     deleteSection
-} = require("../controllers/sectionsControllers");
+} = require("./sections.controller");
 
 const router = express.Router();
 

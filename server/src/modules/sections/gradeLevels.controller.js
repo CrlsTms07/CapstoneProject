@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 3.4 – Manage Section (school structure)
+// Grade level CRUD (grade level name + department).
+const pool = require("../../config/database");
 
 // GET all grade levels
 const getGradeLevels = async (req, res) => {

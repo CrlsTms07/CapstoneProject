@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 3.4 – Manage Section (school structure)
+// Department CRUD (e.g. JHS / SHS departments).
+const pool = require("../../config/database");
 
 // GET all departments
 const getDepartments = async (req, res) => {

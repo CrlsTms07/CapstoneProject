@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 3.4 – Manage Section
+// Section CRUD (section name + grade level).
+const pool = require("../../config/database");
 
 // GET all sections
 const getSections = async (req, res) => {

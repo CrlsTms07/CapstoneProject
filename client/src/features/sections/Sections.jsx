@@ -1,7 +1,9 @@
+// HIPO 3.4 – Manage Section
+// Sections page: list, create, edit and delete sections.
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import '../styles/adminDashboard.css'
+import StaffLayout from '../../components/StaffLayout'
+import '../../styles/adminDashboard.css'
 
 export default function Sections({ user }) {
   const [sections, setSections] = useState([])
