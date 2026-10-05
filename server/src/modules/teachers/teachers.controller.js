@@ -1,6 +1,7 @@
 // HIPO 3.3 – Manage Teacher
 // Teacher records: max subject load, weekly load minutes and ancillary tasks.
 const pool = require("../../config/database");
+const { sendError } = require("../../utils/httpError");
 const { normalizeAncillaryTasks, validMaxSubjectLoad } = require("./teachers.validation");
 
 // GET all teachers
@@ -228,12 +229,8 @@ const deleteTeacher = async (req, res) => {
             teacher: result.rows[0]
         });
     } catch (error) {
-        console.error("Error deleting teacher:", error);
-
-        res.status(500).json({
-            error: "Failed to delete teacher",
-            details: error.message
-        });
+        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
+        sendError(res, error, { action: "delete" });
     }
 };
 
