@@ -1,4 +1,6 @@
-const pool = require('../config/database');
+// HIPO 10.0 – Guest schedule view
+// Read-only schedule listing for guests, filterable by department and section.
+const pool = require('../../config/database');
 
 // Public: GET /api/public/schedules
 // Optional query params: department_id, section_id

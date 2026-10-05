@@ -1,5 +1,7 @@
+// HIPO 10.0 – Guest schedule view
+// Public landing page with the class schedule grid and department / grade / section / day filters.
 import React, { useEffect, useState, useMemo } from 'react'
-import '../styles/publicView.css'
+import './publicView.css'
 
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday']
 

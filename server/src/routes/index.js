@@ -5,7 +5,7 @@ module.exports = {
     buildingsRoutes: require('../modules/rooms/buildings.routes'),
     departmentsRoutes: require('../modules/sections/departments.routes'),
     gradeLevelsRoutes: require('../modules/sections/gradeLevels.routes'),
-    publicSchedulesRoutes: require('./publicSchedulesRoutes'),
+    publicSchedulesRoutes: require('../modules/public/public.routes'),
     publicRolesRoutes: require('../modules/users/roles.public.routes'),
     rolesRoutes: require('../modules/users/roles.routes'),
     roomsRoutes: require('../modules/rooms/rooms.routes'),

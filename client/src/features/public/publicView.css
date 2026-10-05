@@ -1,3 +1,4 @@
+/* HIPO 10.0 – Guest schedule view – styles for the public page */
 :root{ --pv-red:#8f1726; --pv-red-dark:#65101b; --pv-gold:#d9ad4b; --pv-ink:#202020; --pv-muted:#65717d; --pv-line:#e6e1dd; }
 .pv-root{ min-height:100vh; display:flex; flex-direction:column; overflow-x:clip; background:#fff; color:var(--pv-ink); font-family:Arial, Helvetica, sans-serif; }
 .pv-utility{ display:flex; justify-content:space-between; align-items:center; padding:8px clamp(20px,5vw,72px); background:#f4f1ee; color:#5c5c5c; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
