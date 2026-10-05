@@ -1,5 +1,7 @@
+// HIPO 6.0 – Reports
+// Placeholder page: per-teacher, per-room and per-grade-level reports are not implemented yet.
 import React from 'react'
-import StaffLayout from '../components/StaffLayout'
+import StaffLayout from '../../components/StaffLayout'
 
 export default function Reports({ user }) {
   return (
