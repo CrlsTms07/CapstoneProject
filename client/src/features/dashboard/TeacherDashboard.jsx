@@ -1,7 +1,9 @@
+// HIPO 3.1 – Dashboard (teacher) – also the entry point for HIPO 8.0 View Personal Schedule
+// Shows placeholder cards for now; the personal timetable is not wired to the API yet.
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import { DashboardPanel, EmptyState, Icon, MetricCard } from '../components/DashboardPrimitives'
+import StaffLayout from '../../components/StaffLayout'
+import { DashboardPanel, EmptyState, Icon, MetricCard } from '../../components/DashboardPrimitives'
 
 export default function TeacherDashboard({ user }) {
   const navigate = useNavigate()

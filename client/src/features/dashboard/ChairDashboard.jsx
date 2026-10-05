@@ -1,7 +1,9 @@
+// HIPO 3.1 – Dashboard (grade level chairperson)
+// Grade-level overview and shortcuts to sections, faculty load and the plotter.
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import { DashboardPanel, EmptyState, Icon, MetricCard } from '../components/DashboardPrimitives'
+import StaffLayout from '../../components/StaffLayout'
+import { DashboardPanel, EmptyState, Icon, MetricCard } from '../../components/DashboardPrimitives'
 
 const countOf = data => Array.isArray(data) ? data.length : Array.isArray(data?.rows) ? data.rows.length : null
 

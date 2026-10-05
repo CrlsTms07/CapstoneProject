@@ -1,7 +1,9 @@
+// HIPO 3.1 – Dashboard (admin)
+// Institution metrics, pending account approvals and account recovery requests.
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import { DashboardPanel, EmptyState, Icon, MetricCard, initialsFor } from '../components/DashboardPrimitives'
+import StaffLayout from '../../components/StaffLayout'
+import { DashboardPanel, EmptyState, Icon, MetricCard, initialsFor } from '../../components/DashboardPrimitives'
 
 const countOf = data => Array.isArray(data) ? data.length : Array.isArray(data?.rows) ? data.rows.length : null
 

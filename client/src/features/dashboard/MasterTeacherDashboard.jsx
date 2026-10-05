@@ -1,7 +1,9 @@
+// HIPO 3.1 – Dashboard (master teacher)
+// Subject and schedule-review overview.
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import { DashboardPanel, EmptyState, Icon, MetricCard } from '../components/DashboardPrimitives'
+import StaffLayout from '../../components/StaffLayout'
+import { DashboardPanel, EmptyState, Icon, MetricCard } from '../../components/DashboardPrimitives'
 
 const countOf = data => Array.isArray(data) ? data.length : Array.isArray(data?.rows) ? data.rows.length : null
 
