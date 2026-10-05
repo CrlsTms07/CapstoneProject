@@ -28,7 +28,7 @@ Access levels used below: **Public** = no login · **Signed-in** = any logged-in
 | 7.0 | Export PDF/CSV | `features/exports/README.md`; current CSV export and print-to-PDF are in `features/schedules/SchedulePlotter.jsx` | `modules/exports/README.md` – no server export yet | — (runs in the browser) |
 | 8.0 | View Personal Schedule (teacher) | `features/dashboard/TeacherDashboard.jsx` (`/teacher`) – placeholder cards | `modules/schedules/schedules.controller.js` (`getSchedules` returns only the teacher's own rows for the Teacher role) | `GET /api/schedules` (Signed-in) |
 | 9.0 | View Profile | `features/profile/README.md` – not implemented yet | `modules/profile/README.md` – not implemented yet | Related: `GET /api/auth/me` |
-| 10.0 | Guest schedule view (filter by department, section) | `features/public/PublicView.jsx` (`/`)<br>`features/public/publicView.css` | `modules/public/public.routes.js`<br>`public.controller.js`<br>`public.service.js`<br>`public.validation.js` | `GET /api/public/schedules?department_id=&section_id=` (Public) |
+| 10.0 | Guest schedule view (filter by department, grade, section, day) | `features/public/PublicView.jsx` (`/`)<br>`features/public/publicView.css` | `modules/public/public.routes.js` (read-only: other methods get 405)<br>`public.controller.js`<br>`public.service.js` (approved entries only, guest-safe fields)<br>`public.validation.js` | `GET /api/public/schedules?term_id=&department_id=&section_id=` (Public; active term by default)<br>`GET /api/public/terms`, `/api/public/departments`, `/api/public/sections?department_id=` (Public) |
 
 All client paths are relative to `client/src/` and all server paths to `server/src/`. A file listed
 without a folder is in the same folder as the line above it.

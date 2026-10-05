@@ -1,5 +1,6 @@
 // HIPO 10.0 – Guest schedule view
 // Public landing page with the class schedule grid and department / grade / section / day filters.
+// Data: GET /api/public/schedules (approved classes of the current term) and /api/public/terms.
 import React, { useEffect, useState, useMemo } from 'react'
 import './publicView.css'
 
@@ -7,6 +8,7 @@ const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday']
 
 export default function PublicView(){
   const [schedules, setSchedules] = useState([])
+  const [term, setTerm] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -18,10 +20,14 @@ export default function PublicView(){
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch('/api/public/schedules')
+        const [res, termsRes] = await Promise.all([fetch('/api/public/schedules'), fetch('/api/public/terms')])
         if (!res.ok) throw new Error('Failed to load schedules')
         const data = await res.json()
-        if (mounted) setSchedules(Array.isArray(data) ? data : (data.rows || []))
+        const terms = termsRes.ok ? await termsRes.json() : []
+        if (mounted) {
+          setSchedules(Array.isArray(data) ? data : [])
+          setTerm(terms.find(item => item.is_active) || terms[0] || null)
+        }
       } catch (err) {
         setError(err.message || 'Error loading schedules')
       } finally {
@@ -41,8 +47,8 @@ export default function PublicView(){
 
   const gradeLevels = useMemo(() => {
     const map = new Map()
-    schedules.forEach(s => { if (s.grade_level_id) map.set(s.grade_level_id, s.grade_level_id) })
-    return Array.from(map.values())
+    schedules.forEach(s => { if (s.grade_level_id) map.set(s.grade_level_id, s.grade_level_name || `Grade level ${s.grade_level_id}`) })
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
   }, [schedules])
 
   const sections = useMemo(() => {
@@ -124,7 +130,7 @@ export default function PublicView(){
               <span className="pv-eyebrow">ACADEMIC SERVICES</span>
               <h2>Class Schedule</h2>
             </div>
-            <span className="pv-school-year">School Year 2026-2027</span>
+            <span className="pv-school-year">{term ? `School Year ${term.school_year} · ${term.term_name}` : 'School Year'}</span>
           </div>
 
           <section className="pv-filters">
@@ -141,7 +147,7 @@ export default function PublicView(){
                   <label>Grade Level</label>
                   <select value={filters.grade_level_id} onChange={e => setFilters(f => ({...f, grade_level_id: e.target.value}))}>
                     <option value="">All grade levels</option>
-                    {gradeLevels.map(g => <option key={g} value={g}>{g}</option>)}
+                    {gradeLevels.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -182,15 +188,16 @@ export default function PublicView(){
                     <tbody>
                       {times.map(time => (
                         <tr key={time}>
-                          <td className="pv-time-cell">{time.replace(':00','')}</td>
+                          <td className="pv-time-cell">{time}</td>
                           {DAYS.map(day => (
                             <td key={day} className="pv-day-cell">
                               {grid[time] && grid[time][day] ? (
                                 grid[time][day].map((s, idx) => (
                                   <div key={idx} className="pv-schedule-card">
-                                    <div className="pv-subject">{s.subject_name || s.subject || 'Subject'}</div>
-                                    <div className="pv-meta">{s.teacher_last_name ? `Teacher: ${s.teacher_last_name}` : (s.teacher_name || '')}</div>
-                                    <div className="pv-meta">Room: {s.room_number || s.room_id || '-'}</div>
+                                    <div className="pv-subject">{s.subject_name || s.activity}</div>
+                                    <div className="pv-meta">{s.start_time}–{s.end_time}</div>
+                                    {s.teacher_name && <div className="pv-meta">Teacher: {s.teacher_name}</div>}
+                                    <div className="pv-meta">Room: {s.room_number ? `${s.building_name} · ${s.room_number}` : '-'}</div>
                                     <div className="pv-meta small">Section: {s.section_name || s.section_id}</div>
                                   </div>
                                 ))

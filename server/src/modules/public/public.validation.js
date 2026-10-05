@@ -1,4 +1,11 @@
 // HIPO 10.0 – Guest schedule view
-// Request validation for this module. Required-field checks are still inline in public.controller.js.
+// Query-string checks for the guest endpoints (all filters are optional ids).
+const { positiveIdOrNull } = require('../schedules/schedules.validation')
 
-module.exports = {};
+const readScheduleFilters = query => ({
+  termId: positiveIdOrNull(query.term_id),
+  departmentId: positiveIdOrNull(query.department_id),
+  sectionId: positiveIdOrNull(query.section_id)
+})
+
+module.exports = { readScheduleFilters }

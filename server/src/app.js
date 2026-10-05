@@ -65,7 +65,7 @@ app.use("/api/sections", require("./modules/sections/sections.routes"));        
 app.use("/api/time-slots", require("./modules/schedules/timeSlots.routes"));         // HIPO 3.2 Schedule Plotter
 app.use("/api/terms", require("./modules/schedules/terms.routes"));                  // HIPO 3.2 Schedule Plotter
 app.use("/api/schedules", require("./modules/schedules/schedules.routes"));          // HIPO 3.2 / 8.0
-app.use("/api/public/schedules", require("./modules/public/public.routes"));         // HIPO 10.0 Guest view (no auth)
+app.use("/api/public", require("./modules/public/public.routes"));                   // HIPO 10.0 Guest view (no login, read-only)
 app.use("/api/approvals", require("./modules/approvals/approvals.routes"));          // HIPO 5.0 Approvals
 app.use("/api/teacher-tasks", require("./modules/teachers/teacherTasks.routes"));    // HIPO 3.3 Manage Teacher
 app.use("/api/users", require("./modules/users/users.routes"));                      // HIPO 4.3 Users & Roles
