@@ -1,5 +1,7 @@
+// HIPO 5.0 – Approvals
+// Admin review page: legacy approval records and pending JHS class programs (approve / reject).
 import React, { useEffect, useState } from 'react'
-import StaffLayout from '../components/StaffLayout'
+import StaffLayout from '../../components/StaffLayout'
 
 export default function ScheduleApprovals({ user }) {
   const [approvals, setApprovals] = useState([])

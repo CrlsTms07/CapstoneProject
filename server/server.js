@@ -68,6 +68,8 @@ app.use("/api/subjects", routes.subjectsRoutes);
 app.use("/api/sections", routes.sectionsRoutes);
 app.use("/api/time-slots", routes.timeSlotsRoutes);
 app.use("/api/schedules", routes.schedulesRoutes);
+// JHS class-program review (approvals) is mounted first; it only handles /pending and /:programId/review.
+app.use("/api/class-programs", routes.classProgramReviewRoutes);
 app.use("/api/class-programs", routes.classProgramsRoutes);
 
 // Public schedules (no auth)

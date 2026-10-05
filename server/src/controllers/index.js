@@ -7,7 +7,7 @@ module.exports = {
     publicSchedulesControllers: require('./publicSchedulesControllers'),
     rolesControllers: require('../modules/users/roles.controller'),
     roomsControllers: require('../modules/rooms/rooms.controller'),
-    scheduleApprovalsControllers: require('./scheduleApprovalsControllers'),
+    scheduleApprovalsControllers: require('../modules/approvals/approvals.controller'),
     schedulesControllers: require('../modules/schedules/schedules.controller'),
     sectionsControllers: require('../modules/sections/sections.controller'),
     subjectsControllers: require('../modules/subjects/subjects.controller'),

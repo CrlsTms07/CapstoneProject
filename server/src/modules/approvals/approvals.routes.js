@@ -1,3 +1,5 @@
+// HIPO 5.0 – Approvals (legacy schedules)
+// Routes: /api/schedule-approvals (read: signed-in users; create: admin, chair, master teacher; update/delete: admin).
 const express = require("express");
 
 const {
@@ -6,12 +8,12 @@ const {
     createApprovalRecord,
     updateApprovalRecord,
     deleteApprovalRecord
-} = require("../controllers/scheduleApprovalsControllers");
+} = require("./approvals.controller");
 
 const {
     authenticateUser,
     authorizeRoles
-} = require("../middleware/authMiddleware");
+} = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 

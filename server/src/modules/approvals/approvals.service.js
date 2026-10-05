@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 5.0 – Approvals (legacy schedules)
+// Data access for the schedule_approvals table.
+const pool = require("../../config/database");
 
 // GET all approval records
 const getAllApprovals = async () => {

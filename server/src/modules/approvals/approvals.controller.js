@@ -1,11 +1,13 @@
+// HIPO 5.0 – Approvals (legacy schedules)
+// Approval records for /api/schedules; approving/rejecting also updates the schedule status.
 const {
     getAllApprovals,
     getApprovalById,
     createApproval,
     updateApproval,
     deleteApproval
-} = require("../models/scheduleApprovalsModel");
-const pool = require("../config/database");
+} = require("./approvals.service");
+const pool = require("../../config/database");
 
 // GET all approvals
 const getApprovals = async (req, res) => {

@@ -1,5 +1,7 @@
+// HIPO 5.0 – Approvals
+// Lists schedules submitted for review (chair / master teacher view).
 import React, { useEffect, useState } from 'react'
-import StaffLayout from '../components/StaffLayout'
+import StaffLayout from '../../components/StaffLayout'
 
 export default function SubmittedSchedules({ user }) {
   const [schedules, setSchedules] = useState([])

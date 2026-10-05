@@ -16,8 +16,8 @@ import Subjects from './features/subjects/Subjects'
 import Rooms from './features/rooms/Rooms'
 import Users from './features/users/Users'
 import Reports from './pages/Reports'
-import ScheduleApprovals from './pages/ScheduleApprovals'
-import SubmittedSchedules from './pages/SubmittedSchedules'
+import ScheduleApprovals from './features/approvals/ScheduleApprovals'
+import SubmittedSchedules from './features/approvals/SubmittedSchedules'
 
 function App() {
   const [user, setUser] = useState(null)
