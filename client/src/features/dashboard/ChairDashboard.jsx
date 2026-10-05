@@ -14,7 +14,7 @@ export default function ChairDashboard({ user }) {
 
   useEffect(() => {
     let mounted = true
-    const endpoints = [['teachers', '/api/teachers'], ['sections', '/api/sections'], ['pending', '/api/schedule-approvals']]
+    const endpoints = [['teachers', '/api/teachers'], ['sections', '/api/sections'], ['pending', '/api/approvals/submissions?status=pending']]
     Promise.all(endpoints.map(async ([key, url]) => {
       try {
         const response = await fetch(url, { credentials: 'include' })

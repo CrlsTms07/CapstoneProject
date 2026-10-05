@@ -14,7 +14,7 @@ export default function MasterTeacherDashboard({ user }) {
 
   useEffect(() => {
     let mounted = true
-    const endpoints = [['subjects', '/api/subjects'], ['teachers', '/api/teachers'], ['approvals', '/api/schedule-approvals']]
+    const endpoints = [['subjects', '/api/subjects'], ['teachers', '/api/teachers'], ['approvals', '/api/approvals/submissions?status=pending']]
     Promise.all(endpoints.map(async ([key, url]) => {
       try { const response = await fetch(url, { credentials: 'include' }); return response.ok ? [key, countOf(await response.json())] : [key, null] }
       catch { return [key, null] }

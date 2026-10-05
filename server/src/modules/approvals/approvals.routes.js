@@ -1,31 +1,21 @@
-// HIPO 5.0 – Approvals (legacy schedules)
-// Routes: /api/schedule-approvals (read: signed-in users; create: admin, chair, master teacher; update/delete: admin).
-const express = require("express");
+// HIPO 5.0 – Approvals
+// Routes: /api/approvals
+//   POST /submit        draft -> pending                     (admin, chair, master teacher; own scope)
+//   POST /review        pending -> approved / rejected       (admin)
+//   GET  /submissions   section weeks and their status       (admin, chair, master teacher; own scope)
+//   GET  /logs          audit trail (approval_logs)          (admin, chair, master teacher; own scope)
+const express = require('express')
+const { submit, review, getSubmissions, getLogs } = require('./approvals.controller')
+const { ROLES, authenticate, authorize, scopeToDepartment } = require('../../middleware/authMiddleware')
 
-const {
-    getApprovals,
-    getApproval,
-    createApprovalRecord,
-    updateApprovalRecord,
-    deleteApprovalRecord
-} = require("./approvals.controller");
+const router = express.Router()
+const planners = authorize(ROLES.ADMIN, ROLES.CHAIR, ROLES.MASTER_TEACHER)
 
-const { ROLES, authenticate, authorize } = require("../../middleware/authMiddleware");
+router.use(authenticate, scopeToDepartment)
 
-const router = express.Router();
+router.post('/submit', planners, submit)
+router.post('/review', authorize(ROLES.ADMIN), review)
+router.get('/submissions', planners, getSubmissions)
+router.get('/logs', planners, getLogs)
 
-// All Schedule Approval routes require login
-router.use(authenticate);
-
-// View approvals - all authenticated roles
-router.get("/", getApprovals);
-router.get("/:id", getApproval);
-
-// Create approvals (submit) - Admin, Grade Level Chairperson, Master Teacher
-router.post("/", authorize(ROLES.ADMIN, ROLES.CHAIR, ROLES.MASTER_TEACHER), createApprovalRecord);
-
-// Update/Delete approvals (approve/reject) - Admin only
-router.put("/:id", authorize(ROLES.ADMIN), updateApprovalRecord);
-router.delete("/:id", authorize(ROLES.ADMIN), deleteApprovalRecord);
-
-module.exports = router;
+module.exports = router

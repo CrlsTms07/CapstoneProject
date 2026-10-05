@@ -1,28 +1,27 @@
 // HIPO 5.0 – Approvals
-// Lists schedules submitted for review (chair / master teacher view).
+// Section schedules in the user's scope and where each one is in the flow
+// (draft → pending → approved / rejected), from GET /api/approvals/submissions.
 import React, { useEffect, useState } from 'react'
 import StaffLayout from '../../components/StaffLayout'
 
+const cell = { padding: 8, textAlign: 'left', borderBottom: '1px solid var(--border)' }
+const STATUS_LABELS = { draft: 'Draft', pending: 'Pending admin approval', approved: 'Approved', rejected: 'Rejected · revise in the plotter' }
+
 export default function SubmittedSchedules({ user }) {
-  const [schedules, setSchedules] = useState([])
+  const [submissions, setSubmissions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let mounted = true
-    const fetchSchedules = async () => {
-      try {
-        const res = await fetch('/api/schedules', { credentials: 'include' })
-        if (res.ok) {
-          const data = await res.json()
-          if (mounted) setSchedules(Array.isArray(data) ? data : (data.rows || []))
-        }
-      } catch (e) {
-        // ignore
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-    fetchSchedules()
+    fetch('/api/approvals/submissions', { credentials: 'include' })
+      .then(async response => {
+        const data = await response.json().catch(() => null)
+        if (!response.ok) throw new Error(data?.error || 'Unable to load submissions.')
+        if (mounted) setSubmissions(data)
+      })
+      .catch(loadError => { if (mounted) setError(loadError.message) })
+      .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
   }, [])
 
@@ -30,38 +29,24 @@ export default function SubmittedSchedules({ user }) {
     <StaffLayout user={user}>
       <div style={{ padding: 8 }}>
         <h1>Submitted Schedules</h1>
-        <p>View submitted schedule requests for S.Y. 2026-2027</p>
-        {loading ? <div className="placeholder">Loading submitted schedules…</div> : (
-          <div style={{ marginTop: 16 }}>
-            <p>{schedules.length} submitted schedule(s) found.</p>
-            {schedules.length === 0 ? (
-              <div className="placeholder">No submitted schedules.</div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-2)' }}>
-                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Schedule ID</th>
-                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Subject</th>
-                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Teacher</th>
-                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Room</th>
-                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Day</th>
-                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {schedules.map(s => (
-                    <tr key={s.schedule_id}>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{s.schedule_id}</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{s.subject_name || s.subject || '—'}</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{s.teacher_name || s.teacher_last_name || '—'}</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{s.room_number || s.room_id || '—'}</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{s.day_of_week || '—'}</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{s.status || 'Pending'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+        <p>Every section schedule in your scope and its approval status.</p>
+        {error && <div className="placeholder" role="alert">{error}</div>}
+        {loading ? <div className="placeholder">Loading submitted schedules…</div> : submissions.length === 0 ? (
+          <div className="placeholder">No section schedules yet. Start one in the Schedule Plotter.</div>
+        ) : (
+          <div style={{ overflowX: 'auto', marginTop: 16 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead><tr style={{ background: 'var(--bg-2)' }}>{['Term', 'Grade / section', 'Status', 'Last action', 'Notes'].map(label => <th key={label} style={cell}>{label}</th>)}</tr></thead>
+              <tbody>{submissions.map(item => (
+                <tr key={`${item.term_id}-${item.section_id}`}>
+                  <td style={cell}>{item.school_year} · {item.term_name}</td>
+                  <td style={cell}>{item.grade_level_name} - {item.section_name}</td>
+                  <td style={cell}><span className="dash-status">{STATUS_LABELS[item.status] || item.status}</span></td>
+                  <td style={cell}>{item.last_action ? `${item.last_action} by ${item.performed_by_name}, ${new Date(item.last_action_at).toLocaleString()}` : '—'}</td>
+                  <td style={cell}>{item.last_notes || '—'}</td>
+                </tr>
+              ))}</tbody>
+            </table>
           </div>
         )}
       </div>

@@ -23,7 +23,7 @@ export default function AdminDashboard({ user }) {
     const loadDashboard = async () => {
       const endpoints = [
         ['teachers', '/api/teachers'], ['sections', '/api/sections'],
-        ['subjects', '/api/subjects'], ['pending', '/api/schedule-approvals']
+        ['subjects', '/api/subjects'], ['pending', '/api/approvals/submissions?status=pending']
       ]
       const [counts, usersResponse, recoveryResponse] = await Promise.all([
         Promise.all(endpoints.map(async ([key, url]) => {
