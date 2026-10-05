@@ -1,3 +1,4 @@
+// Shared – authentication (session) and role-based authorization middleware.
 // Check if the user is logged in
 const authenticateUser = (req, res, next) => {
     if (!req.session || !req.session.user) {

@@ -1,3 +1,4 @@
+/* Shared – styles for dashboards and the admin management pages */
  .admin-recovery-panel{ margin:20px 0; }
  .admin-recovery-list{ display:grid; gap:12px; width:100%; }
  .admin-recovery-item{ display:flex; justify-content:space-between; align-items:center; gap:18px; padding:14px; border:1px solid #eadfe0; border-left:3px solid #8f1726; background:#fff; }

@@ -1,3 +1,4 @@
+// Shared – SMTP mailer (used by HIPO 2.0 account recovery).
 const nodemailer = require("nodemailer");
 
 const isConfigured = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && process.env.MAIL_FROM);

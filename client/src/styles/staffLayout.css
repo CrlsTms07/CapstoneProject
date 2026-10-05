@@ -1,3 +1,4 @@
+/* Shared – styles for the staff page shell and sidebar */
 :root{
   --brand-950:#3f101a;--brand-900:#531320;--brand-800:#6b1d2f;--brand-700:#800000;--brand-100:#f6e9eb;--brand-50:#fbf4f4;
   --gold-700:#9a6b0b;--gold-500:#d5a63c;--gold-100:#fbf1d8;--surface:#fff;--canvas:#f6f7f9;--ink:#20232b;--muted:#737985;--subtle:#a4a8b0;--line:#e9eaee;--success:#237a55;--success-bg:#e8f5ee;--warning:#9a6b0b;--warning-bg:#fff5dc;--danger:#a33b45;--shadow-sm:0 2px 8px rgba(31,25,27,.045);--shadow-md:0 12px 32px rgba(31,25,27,.09);--radius-lg:16px;--radius-md:12px;--radius-sm:9px

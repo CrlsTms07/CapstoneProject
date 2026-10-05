@@ -1,3 +1,4 @@
+// Shared – role-based sidebar navigation.
 import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Icon, initialsFor, roleLabelFor } from './DashboardPrimitives'

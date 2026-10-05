@@ -1,3 +1,4 @@
+// Shared – client routes: maps each URL to its feature page (see docs/FEATURE_MAP.md).
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import AdminDashboard from './features/dashboard/AdminDashboard'

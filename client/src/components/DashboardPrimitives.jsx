@@ -1,3 +1,4 @@
+// Shared – icons, metric cards, panels and empty states.
 import React from 'react'
 
 const paths = {

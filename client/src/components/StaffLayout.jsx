@@ -1,3 +1,4 @@
+// Shared – page shell for signed-in staff (sidebar, top bar, page heading).
 import React, { useEffect, useRef, useState } from 'react'
 import Sidebar from './Sidebar'
 import { Icon, initialsFor, roleLabelFor } from './DashboardPrimitives'
