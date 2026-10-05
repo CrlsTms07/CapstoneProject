@@ -1,6 +1,8 @@
+// HIPO 2.0 – Login
+// Login, logout, current user, (public) signup and forced password change.
 const bcrypt = require("bcrypt");
-const { findUserByUsername } = require("../models/authModel");
-const pool = require("../config/database");
+const { findUserByUsername } = require("./auth.service");
+const pool = require("../../config/database");
 
 // LOGIN
 const login = async (req, res) => {

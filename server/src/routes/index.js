@@ -1,7 +1,7 @@
 // Centralized export for routers
 module.exports = {
-    authRoutes: require('./authRoutes'),
-    passwordResetRequestsRoutes: require('./passwordResetRequestsRoutes'),
+    authRoutes: require('../modules/auth/auth.routes'),
+    passwordResetRequestsRoutes: require('../modules/auth/passwordReset.routes'),
     buildingsRoutes: require('./buildingsRoutes'),
     departmentsRoutes: require('./departmentsRoutes'),
     gradeLevelsRoutes: require('./gradeLevelsRoutes'),

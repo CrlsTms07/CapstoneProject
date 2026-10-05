@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 2.0 – Login
+// Data access: user lookup by school email or username.
+const pool = require("../../config/database");
 
 // Find a user by school email, with username fallback for existing admin accounts.
 const findUserByEmail = async (email) => {

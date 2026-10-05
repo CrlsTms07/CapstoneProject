@@ -1,9 +1,11 @@
+// HIPO 2.0 – Login (account recovery)
+// Forgot-password requests; admin approval emails a temporary password.
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const pool = require("../config/database");
-const { sendMail } = require("../config/mailer");
+const pool = require("../../config/database");
+const { sendMail } = require("../../config/mailer");
+const { ALLOWED_REASONS } = require("./auth.validation");
 
-const ALLOWED_REASONS = ["Forgotten Password", "Account Locked / Suspicious Activity", "Other"];
 const ADMIN_URL = process.env.ADMIN_DASHBOARD_URL || `${process.env.FRONTEND_URL || "http://localhost:5173"}/admin`;
 
 const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, char => ({

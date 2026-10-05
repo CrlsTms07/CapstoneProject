@@ -1,6 +1,8 @@
+// HIPO 2.0 – Login (account recovery)
+// Forces a new password after signing in with a temporary password.
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import '../styles/login.css'
+import './login.css'
 
 export default function ChangePasswordRequired({ onPasswordChanged }) {
   const [newPassword, setNewPassword] = useState('')

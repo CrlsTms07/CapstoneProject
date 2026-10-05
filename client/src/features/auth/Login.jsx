@@ -1,6 +1,8 @@
+// HIPO 2.0 – Login
+// Staff login page (school email + password).
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import '../styles/login.css'
+import './login.css'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState(() => localStorage.getItem('rememberedSchoolEmail') || '')

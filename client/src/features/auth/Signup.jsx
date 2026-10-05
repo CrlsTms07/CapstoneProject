@@ -1,6 +1,8 @@
+// HIPO 2.0 – Login
+// Public sign-up page (flagged in the audit: the paper requires admin-created accounts only).
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import '../styles/login.css'
+import './login.css'
 
 export default function Signup({ onLogin }) {
   const [fullName, setFullName] = useState('')

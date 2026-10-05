@@ -1,3 +1,5 @@
+// HIPO 2.0 – Login
+// Routes: POST /api/auth/login, /signup, /change-password, /logout; GET /api/auth/me
 const express = require("express");
 
 const {
@@ -6,9 +8,9 @@ const {
     logout
     , signup,
     changePassword
-} = require("../controllers/authControllers");
+} = require("./auth.controller");
 
-const { authenticateUserForPasswordChange } = require("../middleware/authMiddleware");
+const { authenticateUserForPasswordChange } = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 

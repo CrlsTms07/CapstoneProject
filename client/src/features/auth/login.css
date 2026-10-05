@@ -1,3 +1,4 @@
+/* HIPO 2.0 – Login – styles for the auth pages */
 .login-root{ min-height:100vh; display:flex; align-items:center; justify-content:center; background:#fff1f2; padding:28px; font-family:Georgia, 'Times New Roman', serif; }
 .auth-shell{ width:min(100%, 1020px); min-height:620px; display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); overflow:hidden; background:#fff; border-radius:18px; box-shadow:0 22px 60px rgba(112,19,31,.16); }
 .brand-panel{ position:relative; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:56px 48px; color:#fff; text-align:center; background:linear-gradient(145deg,#761522 0%,#a91d2b 58%,#d53845 100%); overflow:hidden; }

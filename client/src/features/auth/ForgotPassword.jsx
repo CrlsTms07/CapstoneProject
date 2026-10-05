@@ -1,6 +1,8 @@
+// HIPO 2.0 – Login (account recovery)
+// Submits an account recovery request to the System Administrator.
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import '../styles/login.css'
+import './login.css'
 
 export default function ForgotPassword() {
   const [employeeIdentifier, setEmployeeIdentifier] = useState('')
