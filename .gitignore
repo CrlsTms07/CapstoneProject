@@ -18,3 +18,28 @@ Thumbs.db
 
 # Test output
 coverage/
+
+# Database dumps / backups (may contain real teacher and user data)
+*.dump
+*.backup
+*.sql.gz
+backups/
+
+# Keys / certificates
+*.pem
+*.key
+*.crt
+
+# Uploaded files (anchored so module folders such as modules/exports stay tracked)
+/uploads/
+/server/uploads/
+
+# Personal editor settings
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Caches
+.npm/
+.eslintcache
+*.local
