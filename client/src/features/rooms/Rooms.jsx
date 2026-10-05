@@ -1,7 +1,9 @@
+// HIPO 4.2 – Rooms & Buildings
+// Rooms & Buildings page: manage buildings and their rooms.
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import '../styles/adminDashboard.css'
+import StaffLayout from '../../components/StaffLayout'
+import '../../styles/adminDashboard.css'
 
 export default function Rooms({ user }) {
   const [rooms, setRooms] = useState([])

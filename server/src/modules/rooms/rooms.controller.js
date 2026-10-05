@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 4.2 – Rooms & Buildings
+// Room CRUD (room number + building).
+const pool = require("../../config/database");
 
 // GET all rooms
 const getRooms = async (req, res) => {

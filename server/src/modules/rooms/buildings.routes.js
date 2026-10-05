@@ -1,3 +1,5 @@
+// HIPO 4.2 – Rooms & Buildings
+// Routes: /api/buildings (CRUD). NOTE: no authentication middleware yet (audit P0).
 const express = require("express");
 
 const {
@@ -6,7 +8,7 @@ const {
     createBuilding,
     updateBuilding,
     deleteBuilding
-} = require("../controllers/buildingsControllers");
+} = require("./buildings.controller");
 
 const router = express.Router();
 

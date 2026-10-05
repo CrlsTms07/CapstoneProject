@@ -1,12 +1,12 @@
 // Centralized export for controllers (MVC-friendly)
 module.exports = {
     authControllers: require('../modules/auth/auth.controller'),
-    buildingsControllers: require('./buildingsControllers'),
+    buildingsControllers: require('../modules/rooms/buildings.controller'),
     departmentsControllers: require('../modules/sections/departments.controller'),
     gradeLevelsControllers: require('../modules/sections/gradeLevels.controller'),
     publicSchedulesControllers: require('./publicSchedulesControllers'),
     rolesControllers: require('../modules/users/roles.controller'),
-    roomsControllers: require('./roomsControllers'),
+    roomsControllers: require('../modules/rooms/rooms.controller'),
     scheduleApprovalsControllers: require('./scheduleApprovalsControllers'),
     schedulesControllers: require('./schedulesControllers'),
     sectionsControllers: require('../modules/sections/sections.controller'),
