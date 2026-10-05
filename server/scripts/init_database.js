@@ -299,12 +299,12 @@ const initDatabase = async () => {
 
         console.log("✅ Secure admin account is ready.");
         console.log(`   Login email: ${result.rows[0].email}`);
-        console.log("   Password: read ADMIN_PASSWORD from back-end/.env\n");
+        console.log("   Password: read ADMIN_PASSWORD from server/.env\n");
 
         console.log("🎉 Database initialization completed successfully!");
         console.log("\n📝 You can now login with:");
         console.log(`   Login email: ${adminEmail}`);
-        console.log("   Password: read ADMIN_PASSWORD from back-end/.env\n");
+        console.log("   Password: read ADMIN_PASSWORD from server/.env\n");
 
         process.exit(0);
     } catch (error) {

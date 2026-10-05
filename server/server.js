@@ -101,9 +101,9 @@ app.use("/api/password-reset-requests", routes.passwordResetRequestsRoutes);
 app.use("/api/auth", routes.authRoutes);
 
 // Serve the built frontend when running the production server.
-app.use(express.static(path.join(__dirname, "../front-end/dist")));
+app.use(express.static(path.join(__dirname, "../client/dist")));
 app.get("/{*splat}", (req, res) => {
-    res.sendFile(path.join(__dirname, "../front-end/dist/index.html"));
+    res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
 
 // =========================

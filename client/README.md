@@ -3,7 +3,7 @@
 Run locally:
 
 ```
-cd front-end
+cd client
 npm install
 npm run dev
 ```
