@@ -8,13 +8,17 @@ endpoints – read it first, and update it whenever you add or move a page, rout
 
 ```
 server/                      Express API (npm run dev → :5000)
-  server.js                  entry point; mounts every module router, labeled with its HIPO number
+  server.js                  entry point: runs the migrations, then listens
+  src/app.js                 Express app; mounts every module router, labeled with its HIPO number
   src/modules/<module>/      one folder per feature
   src/config/                database pool, mailer
   src/middleware/            authenticateUser, authorizeRoles
+  src/utils/httpError.js     HttpError + sendError/handle: PostgreSQL errors -> readable 4xx (409 on conflicts / blocked deletes)
   src/db/migrations/         schema changes run at startup (incl. DB-level conflict guards)
   src/db/seeds/              npm run db:init (tables, roles, admin account)
-  tests/db/                  npm run test:db
+  tests/unit/                npm run test:unit (node:test, no database)
+  tests/integration/         npm run test:integration (real API + a separate <DB_NAME>_test database)
+  tests/db/                  npm run test:db (smoke tests on the real database, rolled back)
 client/                      React app (npm run dev → :5175, proxies /api to :5000)
   src/features/<module>/     pages + module-specific CSS
   src/components/, src/styles/   shared layout and styles
@@ -37,9 +41,11 @@ profile (9.0) · public (10.0)
 - Many controllers still contain inline SQL; when you touch one, move its SQL into the service.
 - **Conflict detection** belongs only in `src/modules/schedules/conflict.service.js` (API) and
   `src/db/migrations/scheduleConflictGuards.migration.js` (database). Change both together.
-- New routers are mounted in `server/server.js` with a `// HIPO x.x` comment. Order matters:
-  `/api/roles/public` before `/api/roles`; approvals' class-program review router before the
-  schedules class-program router (same `/api/class-programs` path).
+- Schedules live in `schedule_entries` (term, section, subject, teacher, room, day, `start_min`–`end_min`
+  in minutes after midnight, status draft → pending → approved / rejected). The older
+  `jhs_class_program_*` and `schedules` tables are no longer written to; their rows were copied once.
+- New routers are mounted in `server/src/app.js` with a `// HIPO x.x` comment. Order matters:
+  `/api/roles/public` before `/api/roles`.
 - Role IDs are hardcoded: 1 admin, 2 grade level chairperson, 3 master teacher, 4 teacher.
 
 ## Client rules
@@ -60,5 +66,5 @@ Shared files use `// Shared – ...` instead.
 
 - Never commit `server/.env` (use `server/.env.example`), `node_modules/` or `dist/`.
 - Work on a branch; commit one module at a time with a `refactor(<module>):` / `feat(<module>):` prefix.
-- Before committing, check that the server boots, `npm run test:db` passes and the client builds
-  (`npx vite build`).
+- Before committing, check that the server boots, `npm test` and `npm run test:db` pass and the client
+  builds (`npx vite build`).

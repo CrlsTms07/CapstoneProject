@@ -1,8 +1,35 @@
 // HIPO 3.2 – Schedule Plotter (database layer)
-// Conflict detection enforced by PostgreSQL itself: GiST exclusion constraints that block
-// teacher / room / section overlaps for JHS class-program entries, and triggers that check
-// legacy `schedules` rows against each other and against class-program entries.
-// API-level checks live in src/modules/schedules/conflict.service.js.
+// Conflict detection enforced by PostgreSQL itself – the safety net behind the API checks in
+// src/modules/schedules/conflict.service.js (change both together).
+//
+// SCHEDULE_ENTRY_GUARDS_SQL (current model): three GiST exclusion constraints on schedule_entries.
+//   Within one term, two entries that are not rejected may not share a teacher, a room or a
+//   section on the same day with overlapping times. int4range(start_min, end_min) is the
+//   half-open range [start, end), so 07:30–08:15 and 08:15–09:00 do NOT overlap.
+//   btree_gist is needed so plain columns (term_id, teacher_id, day_of_week) can sit in a GiST index.
+//
+// SCHEDULE_CONFLICT_GUARDS_SQL (older tables, kept so their existing rows stay protected):
+//   exclusion constraints on jhs_class_program_entries and triggers on the legacy schedules table.
+
+const SCHEDULE_ENTRY_GUARDS_SQL = `
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'schedule_entries_teacher_no_overlap') THEN
+          ALTER TABLE schedule_entries ADD CONSTRAINT schedule_entries_teacher_no_overlap
+            EXCLUDE USING GIST (term_id WITH =, teacher_id WITH =, day_of_week WITH =, int4range(start_min, end_min) WITH &&)
+            WHERE (status <> 'rejected' AND teacher_id IS NOT NULL);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'schedule_entries_room_no_overlap') THEN
+          ALTER TABLE schedule_entries ADD CONSTRAINT schedule_entries_room_no_overlap
+            EXCLUDE USING GIST (term_id WITH =, room_id WITH =, day_of_week WITH =, int4range(start_min, end_min) WITH &&)
+            WHERE (status <> 'rejected' AND room_id IS NOT NULL);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'schedule_entries_section_no_overlap') THEN
+          ALTER TABLE schedule_entries ADD CONSTRAINT schedule_entries_section_no_overlap
+            EXCLUDE USING GIST (term_id WITH =, section_id WITH =, day_of_week WITH =, int4range(start_min, end_min) WITH &&)
+            WHERE (status <> 'rejected');
+        END IF;
+      END $$;
+`
 
 const SCHEDULE_CONFLICT_GUARDS_SQL = `
       DO $$ BEGIN
@@ -93,4 +120,4 @@ const SCHEDULE_CONFLICT_GUARDS_SQL = `
         FOR EACH ROW EXECUTE FUNCTION guard_legacy_schedule_conflicts();
 `
 
-module.exports = { SCHEDULE_CONFLICT_GUARDS_SQL }
+module.exports = { SCHEDULE_ENTRY_GUARDS_SQL, SCHEDULE_CONFLICT_GUARDS_SQL }

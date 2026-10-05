@@ -1,5 +1,6 @@
 // HIPO 3.2 – Schedule Plotter
-// JHS class program editor: live conflict + teacher-load validation, save/submit, CSV export and print (HIPO 7.0).
+// JHS class program editor: live conflict check (POST /api/schedules/check-conflicts), Auto-Generate Draft,
+// save / submit for approval, CSV export and print (HIPO 7.0).
 import React, { useEffect, useMemo, useState } from 'react'
 import StaffLayout from '../../components/StaffLayout'
 import { Icon } from '../../components/DashboardPrimitives'
@@ -82,7 +83,9 @@ function buildEntries(rows) {
   return entries
 }
 
-function rowsFromEntries(entries) {
+function rowsFromEntries(entries, rooms = []) {
+  const buildingOf = entry => entry.building_id || rooms.find(room => Number(room.room_id) === Number(entry.room_id))?.building_id
+  entries = entries.map(entry => ({ ...entry, building_id: buildingOf(entry) }))
   const weekdays = entries.filter(entry => entry.day_of_week !== 'Friday')
   const monTimes = [...new Set(weekdays.map(entry => String(entry.start_time).slice(0, 5)))].sort()
   const fridayEntries = entries.filter(entry => entry.day_of_week === 'Friday').sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))
@@ -199,7 +202,10 @@ export default function SchedulePlotter({ user }) {
   const [gradeLevels, setGradeLevels] = useState([])
   const [options, setOptions] = useState({ subjects: [], teachers: [], rooms: [], buildings: [] })
   const [draft, setDraft] = useState(() => makeDraft('7'))
-  const [programId, setProgramId] = useState(null)
+  const [terms, setTerms] = useState([])
+  const [termId, setTermId] = useState('')
+  const [rejectionNotes, setRejectionNotes] = useState('')
+  const [generating, setGenerating] = useState(false)
   const [status, setStatus] = useState('draft')
   const [theme, setTheme] = useState('light')
   const [view, setView] = useState('editor')
@@ -218,9 +224,12 @@ export default function SchedulePlotter({ user }) {
       fetch('/api/subjects', { credentials: 'include' }).then(response => response.ok ? response.json() : []),
       fetch('/api/teachers', { credentials: 'include' }).then(response => response.ok ? response.json() : []),
       fetch('/api/rooms', { credentials: 'include' }).then(response => response.ok ? response.json() : []),
-      fetch('/api/buildings', { credentials: 'include' }).then(response => response.ok ? response.json() : [])
-    ]).then(([sectionData, gradeData, subjectData, teacherData, roomData, buildingData]) => {
+      fetch('/api/buildings', { credentials: 'include' }).then(response => response.ok ? response.json() : []),
+      fetch('/api/terms', { credentials: 'include' }).then(response => response.ok ? response.json() : { terms: [] })
+    ]).then(([sectionData, gradeData, subjectData, teacherData, roomData, buildingData, termData]) => {
       if (!active) return
+      setTerms(termData.terms || [])
+      setTermId(current => current || String(termData.active_term?.term_id || termData.terms?.[0]?.term_id || ''))
       setSections(Array.isArray(sectionData) ? sectionData : sectionData?.rows || [])
       setGradeLevels(Array.isArray(gradeData) ? gradeData : gradeData?.rows || [])
       setOptions({
@@ -242,6 +251,8 @@ export default function SchedulePlotter({ user }) {
     gradeIds.has(String(section.grade_level_id)) && (Number(user?.role_id) !== 2 || String(section.grade_level_id) === String(user?.assigned_grade_level_id))
   ), [sections, gradeIds, user?.role_id, user?.assigned_grade_level_id])
   const selectedSection = gradeSections.find(section => String(section.section_id) === sectionId)
+  const selectedTerm = terms.find(term => String(term.term_id) === termId)
+  const termLabel = term => `${term.school_year} · ${term.term_name}`
   const gradeSubjects = options.subjects.filter(subject => gradeIds.has(String(subject.grade_level_id)))
   const entries = useMemo(() => buildEntries(draft.rows), [draft.rows])
   const totalMonThu = draft.rows.reduce((sum, row) => sum + (row.monThuTime && (row.monThuSubjectId || row.monThuActivity) ? 45 : 0), 0)
@@ -257,49 +268,53 @@ export default function SchedulePlotter({ user }) {
     if (Number(user?.role_id) !== 2 || !assignedGrade || assignedGrade === grade) return
     setGrade(assignedGrade)
     setSectionId('')
-    setProgramId(null)
     setStatus('draft')
     setDraft(current => ({ ...makeDraft(assignedGrade), schoolYear: current.schoolYear }))
   }, [user?.role_id, assignedGrade, grade])
 
+  // The printed "S.Y." follows the selected term.
   useEffect(() => {
-    if (!sectionId || !entries.length) {
+    if (selectedTerm) setDraft(current => ({ ...current, schoolYear: selectedTerm.school_year }))
+  }, [selectedTerm?.school_year])
+
+  useEffect(() => {
+    if (!sectionId || !termId || !entries.length) {
       setValidation({ conflicts: [], warnings: [] })
       return undefined
     }
     let active = true
     const timer = window.setTimeout(async () => {
       try {
-        const response = await fetch('/api/class-programs/validate', {
+        const response = await fetch('/api/schedules/check-conflicts', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({ section_id: Number(sectionId), program_id: programId, entries })
+          body: JSON.stringify({ term_id: Number(termId), section_id: Number(sectionId), entries })
         })
         const data = await response.json().catch(() => null)
         if (!response.ok) throw new Error(data?.error || 'Schedule validation failed.')
-        if (active) setValidation(data)
+        if (active) setValidation({ conflicts: data.conflicts, warnings: data.teacher_loads })
       } catch (validationError) {
         if (active) setValidation({ conflicts: [], warnings: [], error: validationError.message })
       }
     }, 350)
     return () => { active = false; window.clearTimeout(timer) }
-  }, [sectionId, programId, entries])
+  }, [sectionId, termId, entries])
 
   useEffect(() => {
-    if (!sectionId) return undefined
+    if (!sectionId || !termId) return undefined
     let active = true
     const loadProgram = async () => {
       setLoadingProgram(true)
       setError('')
       try {
-        const response = await fetch(`/api/class-programs/section/${sectionId}?school_year=${encodeURIComponent(draft.schoolYear)}`, { credentials: 'include' })
+        const response = await fetch(`/api/schedules/section/${sectionId}?term_id=${termId}`, { credentials: 'include' })
         const data = await response.json().catch(() => null)
         if (!response.ok) throw new Error(data?.error || 'Unable to load saved class program.')
         if (!active) return
-        const program = data?.program
-        setProgramId(program?.program_id || null)
-        setStatus(program?.status || 'draft')
-        setValidation({ conflicts: [], warnings: data?.warnings || [] })
-        setDraft(current => ({ ...makeDraft(grade), ...(program?.header || {}), grade, section: selectedSection?.section_name || '', schoolYear: current.schoolYear, rows: program ? rowsFromEntries(program.entries || []) : [makeRow()] }))
+        const saved = data.entries.length > 0
+        setStatus(data.status === 'empty' ? 'draft' : data.status)
+        setRejectionNotes(data.rejection_notes || '')
+        setValidation({ conflicts: [], warnings: [] })
+        setDraft(current => ({ ...makeDraft(grade), ...data.header, grade, section: selectedSection?.section_name || '', schoolYear: current.schoolYear, rows: saved ? rowsFromEntries(data.entries, options.rooms) : [makeRow()] }))
       } catch (loadError) {
         if (active) setError(loadError.message)
       } finally {
@@ -308,7 +323,7 @@ export default function SchedulePlotter({ user }) {
     }
     loadProgram()
     return () => { active = false }
-  }, [sectionId, draft.schoolYear, grade, selectedSection?.section_name])
+  }, [sectionId, termId, grade, selectedSection?.section_name])
 
   const updateHeader = (field, value) => {
     setDraft(current => ({ ...current, [field]: value }))
@@ -323,23 +338,20 @@ export default function SchedulePlotter({ user }) {
   const changeGrade = value => {
     setGrade(value)
     setSectionId('')
-    setProgramId(null)
     setStatus('draft')
     setDraft(current => ({ ...makeDraft(value), schoolYear: current.schoolYear }))
   }
 
   const changeSection = value => {
     setSectionId(value)
-    setProgramId(null)
     setStatus('draft')
     setValidation({ conflicts: [], warnings: [] })
     setDraft(current => ({ ...makeDraft(grade), schoolYear: current.schoolYear }))
   }
 
-  const changeSchoolYear = value => {
-    setProgramId(null)
+  const changeTerm = value => {
+    setTermId(value)
     setStatus('draft')
-    updateHeader('schoolYear', value)
   }
 
   const addRow = () => setDraft(current => ({ ...current, rows: [...current.rows, makeRow()] }))
@@ -361,21 +373,56 @@ export default function SchedulePlotter({ user }) {
     setSaving(true)
     setError('')
     try {
-      const header = { ...draft, section: selectedSection?.section_name || draft.section, grade }
-      const response = await fetch('/api/class-programs', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ section_id: Number(sectionId), school_year: draft.schoolYear, header, entries, status: nextStatus })
+      const { rows: _rows, ...headerFields } = draft
+      const header = { ...headerFields, section: selectedSection?.section_name || draft.section, grade }
+      const response = await fetch(`/api/schedules/section/${sectionId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ term_id: Number(termId), header, entries })
       })
       const data = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(data?.message || data?.error || 'Unable to save the class program.')
-      setProgramId(data.program.program_id)
-      setStatus(data.program.status)
-      setValidation(current => ({ ...current, warnings: data.warnings || [] }))
+      if (!response.ok) {
+        if (data?.conflicts) setValidation({ conflicts: data.conflicts, warnings: data.teacher_loads || [] })
+        throw new Error(data?.error || 'Unable to save the class program.')
+      }
+      setStatus(data.status === 'empty' ? 'draft' : data.status)
+      setValidation(current => ({ ...current, warnings: data.teacher_loads || [] }))
+      if (nextStatus === 'pending') {
+        const submitted = await fetch('/api/approvals/submit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ term_id: Number(termId), section_id: Number(sectionId) })
+        })
+        const submitData = await submitted.json().catch(() => null)
+        if (!submitted.ok) throw new Error(submitData?.error || 'The draft was saved, but it could not be submitted.')
+        setStatus('pending')
+      }
       setSaveMessage(nextStatus === 'pending' ? 'Submitted for admin approval.' : 'Draft saved to the database.')
     } catch (saveError) {
       setError(saveError.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Asks the server to fill the empty periods; the rows appear in the editor for review before saving.
+  const autoGenerate = async () => {
+    if (!sectionId || !termId) { setError('Select a section and term first.'); return }
+    setGenerating(true)
+    setError('')
+    setSaveMessage('')
+    try {
+      const response = await fetch('/api/schedules/auto-generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ term_id: Number(termId), section_id: Number(sectionId), entries })
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error || 'Auto-generate failed.')
+      setDraft(current => ({ ...current, rows: rowsFromEntries([...entries, ...data.generated], options.rooms) }))
+      const missing = data.unfilled.map(item => `${item.subject_name} (${item.missing_periods} period(s): ${item.reason})`)
+      setSaveMessage(`Added ${data.generated.length} period(s). Review them, then Save Draft.${missing.length ? ` Not placed: ${missing.join('; ')}` : ''}`)
+    } catch (generateError) {
+      setError(generateError.message)
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -419,12 +466,13 @@ export default function SchedulePlotter({ user }) {
             <div className="plotter-selectors">
               <label>Grade level<select value={grade} onChange={event => changeGrade(event.target.value)}>{gradeOptions.map(item => <option key={item} value={item}>Grade {item}</option>)}</select></label>
               <label>Section<select value={sectionId} onChange={event => changeSection(event.target.value)} disabled={loadingOptions}><option value="">Select section</option>{gradeSections.map(section => <option key={section.section_id} value={section.section_id}>{section.section_name}</option>)}</select></label>
-              <label>School year<select value={draft.schoolYear} onChange={event => changeSchoolYear(event.target.value)}>{['2025-2026', '2026-2027', '2027-2028'].map(year => <option key={year} value={year}>{year}</option>)}</select></label>
+              <label>Term<select value={termId} onChange={event => changeTerm(event.target.value)}>{terms.map(term => <option key={term.term_id} value={term.term_id}>{termLabel(term)}{term.is_active ? ' (current)' : ''}</option>)}</select></label>
               <label className="plotter-paper-select">Paper<select value={draft.paperSize} onChange={event => updateHeader('paperSize', event.target.value)}><option value="letter">Short bond · 8.5 × 11 in</option><option value="long">Long bond · 8.5 × 13 in</option></select></label>
             </div>
             <div className="plotter-actions">
               <span className={`plotter-program-status status-${status}`}>{status === 'pending' ? 'Pending Admin Approval' : status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected · revise draft' : 'Draft'}</span>
               <button className="plotter-button" type="button" onClick={resetDraft}>Reset</button>
+              <button className="plotter-button" type="button" disabled={generating || loadingProgram || !sectionId || status === 'pending' || status === 'approved'} onClick={autoGenerate}>{generating ? 'Generating…' : 'Auto-Generate Draft'}</button>
               <button className="plotter-button plotter-button-primary" type="button" disabled={saving || loadingProgram || status === 'pending' || status === 'approved'} onClick={() => saveProgram('draft')}>Save Draft</button>
               <button className="plotter-button plotter-button-primary" type="button" disabled={saving || loadingProgram || status === 'pending' || status === 'approved'} onClick={() => saveProgram('pending')}>{saving ? 'Saving…' : 'Submit for Admin Approval'}</button>
               <button className="plotter-button" type="button" onClick={exportCsv}>Export CSV</button>
@@ -436,6 +484,7 @@ export default function SchedulePlotter({ user }) {
           <nav className="plotter-view-tabs" aria-label="Plotter view"><button type="button" className={view === 'editor' ? 'active' : ''} onClick={() => setView('editor')}>Editor</button><button type="button" className={view === 'preview' ? 'active' : ''} onClick={() => setView('preview')}>Print preview</button></nav>
 
           {(error || validation.error) && <div className="plotter-error" role="alert">{error || validation.error}</div>}
+          {status === 'rejected' && rejectionNotes && <div className="plotter-error" role="status">Admin notes: {rejectionNotes}</div>}
           {saveMessage && <div className="plotter-feedback" role="status">{saveMessage}</div>}
           {loadingOptions && <div className="placeholder">Loading JHS sections and resources…</div>}
           {loadingProgram && <div className="placeholder">Loading saved program…</div>}
@@ -480,7 +529,7 @@ export default function SchedulePlotter({ user }) {
 
             <section className="plotter-load-panel" aria-live="polite">
               <div className="plotter-load-title"><div><span>LIVE VALIDATION</span><strong>Conflicts and teacher workload</strong></div><span className={validation.conflicts.length ? 'plotter-warning-badge' : 'plotter-ok-badge'}>{validation.conflicts.length ? `${validation.conflicts.length} conflict(s)` : 'No conflicts'}</span></div>
-              {validation.conflicts.map((conflict, index) => <p className="plotter-conflict-line" key={`${conflict.resource}-${conflict.day_of_week}-${index}`}>{conflict.message} {conflict.day_of_week} · {conflict.start_time}</p>)}
+              {validation.conflicts.map((conflict, index) => <p className="plotter-conflict-line" key={`${conflict.type}-${conflict.day_of_week}-${index}`}><strong>{conflict.day_of_week} {conflict.start_time}:</strong> {conflict.message}{conflict.alternative_rooms?.length > 0 && <small> Free rooms: {conflict.alternative_rooms.map(room => room.label).join(', ')}</small>}</p>)}
               {validation.warnings.map(teacher => <div className={`plotter-teacher-load${teacher.overloaded ? ' overloaded' : ''}`} key={teacher.teacher_id}><strong>{teacher.teacher_name}</strong><span>{teacher.subject_count} / {teacher.max_subject_load} subjects</span>{teacher.overloaded && <b>Overload</b>}{teacher.ancillary_tasks?.length > 0 && <small>Ancillary: {teacher.ancillary_tasks.join(', ')}</small>}</div>)}
               {incompleteCount > 0 && <p className="plotter-load-help">Complete the time, teacher, building, and room assignments for each subject row.</p>}
             </section>

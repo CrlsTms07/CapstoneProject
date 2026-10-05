@@ -9,14 +9,17 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD,
 });
 
-pool.query("SELECT NOW()", (err, result) => {
-    if (err) {
-        console.error("❌ PostgreSQL connection failed:");
-        console.error(err.message);
-    } else {
-        console.log("✅ Connected to PostgreSQL database!");
-        console.log("🕐 Database time:", result.rows[0].now);
-    }
-});
+// Startup connection check (skipped while the automated tests run).
+if (process.env.NODE_ENV !== "test") {
+    pool.query("SELECT NOW()", (err, result) => {
+        if (err) {
+            console.error("❌ PostgreSQL connection failed:");
+            console.error(err.message);
+        } else {
+            console.log("✅ Connected to PostgreSQL database!");
+            console.log("🕐 Database time:", result.rows[0].now);
+        }
+    });
+}
 
 module.exports = pool;

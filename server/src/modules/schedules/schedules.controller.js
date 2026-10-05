@@ -1,363 +1,114 @@
-// HIPO 3.2 – Schedule Plotter (legacy schedules)
-// Schedule CRUD with conflict checks (conflict.service.js). Chair / master teacher submissions start as pending.
-const pool = require("../../config/database");
-const { findLegacyScheduleConflict } = require("./conflict.service");
+// HIPO 3.2 – Schedule Plotter (also HIPO 8.0: a teacher sees only their own approved classes)
+// HTTP handlers for /api/schedules: list / read entries, live conflict check, the plotter's
+// section week (load and save), Auto-Generate Draft, and single-entry create / update / delete.
+const { HttpError, handle } = require('../../utils/httpError')
+const { ENTRY_STATUSES, positiveIdOrNull, requireId, normalizeEntry, normalizeEntries } = require('./schedules.validation')
+const { checkConflictsForEntries } = require('./conflict.service')
+const { generateDraftForSection } = require('./autoGenerate.service')
+const {
+  ROLE, assertTermExists, assertSectionInScope, getDraftIds, getTeacherIdForUser,
+  listEntries, getEntry, getSectionTimetable, saveSectionDraft, createEntry, updateEntry, deleteEntry
+} = require('./schedules.service')
 
-// HTTP responses for each conflict type returned by findLegacyScheduleConflict.
-const LEGACY_CONFLICT_RESPONSES = {
-    teacher: {
-        error: "Teacher conflict",
-        message: "The teacher is already assigned to another schedule at this day and time."
-    },
-    room: {
-        error: "Room conflict",
-        message: "The room is already assigned to another schedule at this day and time."
-    },
-    section: {
-        error: "Section conflict",
-        message: "The section already has another schedule at this day and time."
-    }
-};
+const isTeacher = user => Number(user.role_id) === ROLE.TEACHER
 
-// GET all schedules
-const getSchedules = async (req, res) => {
-    try {
-        // If the logged-in user is a Teacher (role_id 4), return only their schedules
-        if (req.session && req.session.user && req.session.user.role_id === 4) {
-            const userId = req.session.user.user_id;
-            const teacherRes = await pool.query(
-                `SELECT teacher_id FROM teachers WHERE user_id = $1 LIMIT 1`,
-                [userId]
-            );
+// GET /api/schedules?term_id=&section_id=&teacher_id=&room_id=&status=
+const getSchedules = handle(async (req, res) => {
+  const user = req.session.user
+  const status = req.query.status ? String(req.query.status) : null
+  if (status && !ENTRY_STATUSES.includes(status)) throw new HttpError(400, `status must be one of: ${ENTRY_STATUSES.join(', ')}.`)
+  const filters = {
+    termId: positiveIdOrNull(req.query.term_id),
+    sectionId: positiveIdOrNull(req.query.section_id),
+    teacherId: positiveIdOrNull(req.query.teacher_id),
+    roomId: positiveIdOrNull(req.query.room_id),
+    statuses: status ? [status] : null
+  }
+  if (isTeacher(user)) {
+    // Teachers only ever see their own approved classes.
+    const teacherId = await getTeacherIdForUser(user.user_id)
+    if (!teacherId) return res.json([])
+    Object.assign(filters, { teacherId, statuses: ['approved'] })
+  }
+  res.json(await listEntries(filters))
+})
 
-            if (teacherRes.rows.length === 0) {
-                return res.status(200).json([]);
-            }
+// GET /api/schedules/:id
+const getScheduleById = handle(async (req, res) => {
+  const entry = await getEntry(requireId(req.params.id, 'Schedule entry id'))
+  const user = req.session.user
+  const hidden = isTeacher(user) && (entry?.status !== 'approved' || entry?.teacher_id !== await getTeacherIdForUser(user.user_id))
+  if (!entry || hidden) throw new HttpError(404, 'Schedule entry not found.')
+  res.json(entry)
+})
 
-            const teacherId = teacherRes.rows[0].teacher_id;
-            const result = await pool.query(
-                `SELECT * FROM schedules WHERE teacher_id = $1 ORDER BY schedule_id`,
-                [teacherId]
-            );
+// POST /api/schedules/check-conflicts – the plotter calls this on every change (debounced).
+// Body: { term_id, section_id, entries: [...] }. The rows replace the section's saved drafts.
+const checkScheduleConflicts = handle(async (req, res) => {
+  const termId = requireId(req.body.term_id, 'term_id')
+  const sectionId = requireId(req.body.section_id, 'section_id')
+  await assertTermExists(termId)
+  await assertSectionInScope(sectionId, req.session.user)
+  const entries = normalizeEntries(req.body.entries, { termId, sectionId })
+  const ignoreEntryIds = await getDraftIds(sectionId, termId)
+  const { conflicts, teacherLoads } = await checkConflictsForEntries(entries, { termId, ignoreEntryIds })
+  res.json({ conflicts, teacher_loads: teacherLoads })
+})
 
-            return res.status(200).json(result.rows);
-        }
+// GET /api/schedules/section/:sectionId?term_id=
+const getSectionSchedule = handle(async (req, res) => {
+  const sectionId = requireId(req.params.sectionId, 'Section id')
+  const termId = requireId(req.query.term_id, 'term_id')
+  await assertTermExists(termId)
+  await assertSectionInScope(sectionId, req.session.user)
+  res.json(await getSectionTimetable(sectionId, termId))
+})
 
-        const result = await pool.query(`
-            SELECT *
-            FROM schedules
-            ORDER BY schedule_id
-        `);
+// PUT /api/schedules/section/:sectionId – save the plotter's week as drafts.
+// Body: { term_id, header, entries }. 409 with the full conflict list when anything clashes.
+const saveSectionSchedule = handle(async (req, res) => {
+  const sectionId = requireId(req.params.sectionId, 'Section id')
+  const termId = requireId(req.body.term_id, 'term_id')
+  const entries = normalizeEntries(req.body.entries, { termId, sectionId })
+  const header = req.body.header && typeof req.body.header === 'object' && !Array.isArray(req.body.header) ? req.body.header : {}
+  const { timetable, teacherLoads } = await saveSectionDraft({ sectionId, termId, header, entries, user: req.session.user })
+  res.json({ ...timetable, teacher_loads: teacherLoads })
+})
 
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error("Error fetching schedules:", error);
+// POST /api/schedules/auto-generate – propose rows for the section's empty periods (not saved).
+// Body: { term_id, section_id, entries? } – entries are the plotter's current unsaved rows.
+const autoGenerateSchedule = handle(async (req, res) => {
+  const termId = requireId(req.body.term_id, 'term_id')
+  const sectionId = requireId(req.body.section_id, 'section_id')
+  const currentEntries = req.body.entries ? normalizeEntries(req.body.entries, { termId, sectionId }) : null
+  res.json(await generateDraftForSection({ termId, sectionId, user: req.session.user, currentEntries }))
+})
 
-        res.status(500).json({
-            error: "Failed to fetch schedules"
-        });
-    }
-};
+// POST /api/schedules – one draft entry.
+const createSchedule = handle(async (req, res) => {
+  res.status(201).json(await createEntry(normalizeEntry(req.body), req.session.user))
+})
 
-// GET schedule by ID
-const getScheduleById = async (req, res) => {
-    try {
-        const { id } = req.params;
+// PUT /api/schedules/:id – edit a draft or rejected entry (it becomes a draft again).
+const updateSchedule = handle(async (req, res) => {
+  const entryId = requireId(req.params.id, 'Schedule entry id')
+  res.json(await updateEntry(entryId, normalizeEntry(req.body), req.session.user))
+})
 
-        const result = await pool.query(
-            `SELECT * FROM schedules WHERE schedule_id = $1`,
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Schedule not found"
-            });
-        }
-
-        const schedule = result.rows[0];
-
-        // If the logged-in user is a Teacher, ensure they can only view their own schedule
-        if (req.session && req.session.user && req.session.user.role_id === 4) {
-            const userId = req.session.user.user_id;
-            const teacherRes = await pool.query(
-                `SELECT teacher_id FROM teachers WHERE user_id = $1 LIMIT 1`,
-                [userId]
-            );
-
-            if (teacherRes.rows.length === 0) {
-                return res.status(403).json({ error: "Access denied." });
-            }
-
-            const teacherId = teacherRes.rows[0].teacher_id;
-            if (schedule.teacher_id !== teacherId) {
-                return res.status(403).json({ error: "Access denied." });
-            }
-        }
-
-        res.status(200).json(schedule);
-    } catch (error) {
-        console.error("Error fetching schedule:", error);
-
-        res.status(500).json({
-            error: "Failed to fetch schedule"
-        });
-    }
-};
-
-// CREATE schedule
-const createSchedule = async (req, res) => {
-    try {
-        const {
-            section_id,
-            subject_id,
-            teacher_id,
-            room_id,
-            time_slot_id,
-            day_of_week,
-            status
-        } = req.body;
-
-        // Determine effective status based on creator role
-        let effectiveStatus = status;
-        const creatorRoleId = req.session && req.session.user && req.session.user.role_id;
-        const creatorUserId = req.session && req.session.user && req.session.user.user_id;
-
-        // If Grade Level Chairperson (2) or Master Teacher (3) create schedule, mark as pending
-        if (creatorRoleId === 2 || creatorRoleId === 3) {
-            effectiveStatus = 'pending';
-        }
-
-        // Check for teacher / room / section conflicts on the same day and time slot (conflict.service.js)
-        const conflict = await findLegacyScheduleConflict({ section_id, teacher_id, room_id, time_slot_id, day_of_week });
-
-        if (conflict) {
-            return res.status(409).json({
-                ...LEGACY_CONFLICT_RESPONSES[conflict.resource],
-                conflicting_schedule_id: conflict.schedule.schedule_id
-            });
-        }
-
-        // Create schedule if no conflict exists
-        const result = await pool.query(
-            `
-            INSERT INTO schedules (
-                section_id,
-                subject_id,
-                teacher_id,
-                room_id,
-                time_slot_id,
-                day_of_week,
-                status
-            )
-            VALUES (
-                $1,
-                $2,
-                $3,
-                $4,
-                $5,
-                $6,
-                COALESCE($7, 'scheduled')
-            )
-            RETURNING *
-            `,
-            [
-                section_id,
-                subject_id,
-                teacher_id,
-                room_id,
-                time_slot_id,
-                day_of_week,
-                effectiveStatus
-            ]
-        );
-
-        const created = result.rows[0];
-
-        // If created as pending, insert an approval record noting the submission
-        if (created.status === 'pending') {
-            try {
-                await pool.query(
-                    `INSERT INTO schedule_approvals (schedule_id, action, performed_by) VALUES ($1, $2, $3)`,
-                    [created.schedule_id, 'pending', creatorUserId || null]
-                );
-            } catch (err) {
-                console.error('Failed to create approval record for pending schedule:', err);
-                // Non-fatal: keep the schedule but inform caller
-            }
-        }
-
-        res.status(201).json(created);
-
-    } catch (error) {
-        console.error("Error creating schedule:", error);
-
-        // Invalid foreign key
-        if (error.code === "23503") {
-            return res.status(400).json({
-                error: "Invalid foreign key",
-                message: "One or more referenced IDs do not exist.",
-                details: error.detail
-            });
-        }
-
-        // Missing required field
-        if (error.code === "23502") {
-            return res.status(400).json({
-                error: "Missing required field",
-                message: "A required schedule field was not provided.",
-                details: error.detail
-            });
-        }
-
-        // Unexpected error
-        return res.status(500).json({
-            error: "Failed to create schedule",
-            details: error.message
-        });
-    }
-};
-
-// UPDATE schedule
-const updateSchedule = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const {
-            section_id,
-            subject_id,
-            teacher_id,
-            room_id,
-            time_slot_id,
-            day_of_week,
-            status
-        } = req.body;
-
-        // Check for conflicts, excluding the current schedule (conflict.service.js)
-        const conflict = await findLegacyScheduleConflict({ section_id, teacher_id, room_id, time_slot_id, day_of_week }, id);
-
-        if (conflict) {
-            return res.status(409).json({
-                ...LEGACY_CONFLICT_RESPONSES[conflict.resource],
-                conflicting_schedule_id: conflict.schedule.schedule_id
-            });
-        }
-
-        const result = await pool.query(
-            `
-            UPDATE schedules
-            SET
-                section_id = $1,
-                subject_id = $2,
-                teacher_id = $3,
-                room_id = $4,
-                time_slot_id = $5,
-                day_of_week = $6,
-                status = $7
-            WHERE schedule_id = $8
-            RETURNING *
-            `,
-            [
-                section_id,
-                subject_id,
-                teacher_id,
-                room_id,
-                time_slot_id,
-                day_of_week,
-                status,
-                id
-            ]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Schedule not found"
-            });
-        }
-
-        res.status(200).json(result.rows[0]);
-
-    } catch (error) {
-        console.error("Error updating schedule:", error);
-
-        if (error.code === "23503") {
-            return res.status(400).json({
-                error: "Invalid foreign key",
-                message: "One or more referenced IDs do not exist.",
-                details: error.detail
-            });
-        }
-
-        if (error.code === "23502") {
-            return res.status(400).json({
-                error: "Missing required field",
-                message: "A required schedule field was not provided.",
-                details: error.detail
-            });
-        }
-
-        return res.status(500).json({
-            error: "Failed to update schedule",
-            details: error.message
-        });
-    }
-};
-
-// DELETE schedule
-const deleteSchedule = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const result = await pool.query(
-            `
-            DELETE FROM schedules
-            WHERE schedule_id = $1
-            RETURNING *
-            `,
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Schedule not found"
-            });
-        }
-
-        res.status(200).json({
-            message: "Schedule deleted successfully",
-            schedule: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error("Error creating schedule:", error);
-
-        if (error.code === "23503") {
-            return res.status(400).json({
-                error: "Invalid foreign key",
-                message: "One or more referenced IDs do not exist.",
-                details: error.detail
-            });
-        }
-
-        if (error.code === "23502") {
-            return res.status(400).json({
-                error: "Missing required field",
-                message: "A required schedule field was not provided.",
-                details: error.detail
-            });
-        }
-
-        return res.status(500).json({
-            error: "Failed to create schedule",
-            details: error.message
-        });
-    }
-};
+// DELETE /api/schedules/:id – 409 when the entry is pending / approved or has approval history.
+const deleteSchedule = handle(async (req, res) => {
+  const entry = await deleteEntry(requireId(req.params.id, 'Schedule entry id'), req.session.user)
+  res.json({ message: 'Schedule entry deleted.', entry })
+}, { action: 'delete' })
 
 module.exports = {
-    getSchedules,
-    getScheduleById,
-    createSchedule,
-    updateSchedule,
-    deleteSchedule
-};
+  getSchedules,
+  getScheduleById,
+  checkScheduleConflicts,
+  getSectionSchedule,
+  saveSectionSchedule,
+  autoGenerateSchedule,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule
+}

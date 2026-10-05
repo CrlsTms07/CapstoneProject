@@ -23,7 +23,7 @@ const ensureAccountRecoverySchema = async () => {
         CREATE INDEX IF NOT EXISTS password_reset_requests_pending_idx
             ON password_reset_requests(status, requested_at);
     `);
-    console.log("Ensured account recovery schema exists");
+    if (process.env.NODE_ENV !== "test") console.log("Ensured account recovery schema exists");
 };
 
 module.exports = { ensureAccountRecoverySchema };

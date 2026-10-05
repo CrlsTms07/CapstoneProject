@@ -8,8 +8,10 @@
     "dev": "nodemon server.js",
     "start:dev": "nodemon server.js",
     "db:init": "node src/db/seeds/init_database.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test:db": "node tests/db/verify_jhs_schema.js && node tests/db/test_jhs_conflict_constraint.js"
+    "test": "node --test --test-concurrency=1 \"tests/unit/*.test.js\" \"tests/integration/*.test.js\"",
+    "test:db": "node tests/db/verify_jhs_schema.js && node tests/db/test_jhs_conflict_constraint.js && node tests/db/test_schedule_entry_constraints.js",
+    "test:unit": "node --test \"tests/unit/*.test.js\"",
+    "test:integration": "node --test --test-concurrency=1 \"tests/integration/*.test.js\""
   },
   "keywords": [],
   "author": "",

@@ -17,7 +17,7 @@ Access levels used below: **Public** = no login · **Signed-in** = any logged-in
 |---|---|---|---|---|
 | 2.0 | Login | `features/auth/Login.jsx` (`/login`)<br>`features/auth/Signup.jsx` (`/signup`)<br>`features/auth/ForgotPassword.jsx` (`/forgot`)<br>`features/auth/ChangePasswordRequired.jsx` (`/change-password-required`)<br>`features/auth/login.css` | `modules/auth/auth.routes.js`<br>`auth.controller.js`<br>`auth.service.js`<br>`auth.validation.js`<br>`passwordReset.routes.js`<br>`passwordReset.controller.js` | `POST /api/auth/login` (Public)<br>`POST /api/auth/signup` (Public)<br>`GET /api/auth/me`<br>`POST /api/auth/logout`<br>`POST /api/auth/change-password` (Signed-in)<br>`POST /api/password-reset-requests` (Public)<br>`GET /api/password-reset-requests` (Admin)<br>`POST /api/password-reset-requests/:id/:decision` (Admin) |
 | 3.1 | Dashboard | `features/dashboard/AdminDashboard.jsx` (`/admin`)<br>`ChairDashboard.jsx` (`/chair`)<br>`MasterTeacherDashboard.jsx` (`/master-teacher`)<br>`TeacherDashboard.jsx` (`/teacher`) | `modules/dashboard/README.md` (no endpoints of its own) | Uses other modules' endpoints: `/api/teachers`, `/api/sections`, `/api/subjects`, `/api/schedule-approvals`, `/api/users/pending`, `/api/password-reset-requests` |
-| 3.2 | Schedule Plotter (real-time conflict detection) | `features/schedules/SchedulePlotter.jsx` (`/plot-schedule`)<br>`features/schedules/schedulePlotter.css` | `modules/schedules/classPrograms.routes.js`<br>`classPrograms.controller.js`<br>`classPrograms.errors.js`<br>`schedules.routes.js`<br>`schedules.controller.js`<br>`schedules.service.js`<br>`schedules.validation.js`<br>**`conflict.service.js`**<br>`timeSlots.routes.js`<br>`timeSlots.controller.js` | `GET /api/class-programs/section/:sectionId` (Admin, Chair)<br>`POST /api/class-programs/validate` (Admin, Chair) – live conflict check<br>`POST /api/class-programs` (Admin, Chair) – save draft / submit<br>`GET /api/schedules`, `GET /api/schedules/:id` (Signed-in)<br>`POST`, `PUT /api/schedules/:id` (Admin, Chair, MT)<br>`DELETE /api/schedules/:id` (Admin)<br>`/api/time-slots` CRUD (Public) |
+| 3.2 | Schedule Plotter (real-time conflict detection, Auto-Generate Draft) | `features/schedules/SchedulePlotter.jsx` (`/plot-schedule`)<br>`features/schedules/schedulePlotter.css` | `modules/schedules/schedules.routes.js`<br>`schedules.controller.js`<br>`schedules.service.js`<br>`schedules.validation.js`<br>**`conflict.service.js`**<br>`autoGenerate.service.js`<br>`terms.routes.js`<br>`terms.controller.js`<br>`terms.service.js`<br>`timeSlots.routes.js`<br>`timeSlots.controller.js` (legacy) | `GET /api/schedules`, `GET /api/schedules/:id` (Signed-in; teachers: own approved only)<br>`POST /api/schedules/check-conflicts` (Admin, Chair, MT) – live conflict check<br>`POST /api/schedules/auto-generate` (Admin, Chair, MT) – propose rows for empty periods<br>`GET`, `PUT /api/schedules/section/:sectionId?term_id=` (Admin, Chair, MT) – load / save a section's week as drafts<br>`POST`, `PUT`, `DELETE /api/schedules/:id` (Admin, Chair, MT; draft / rejected entries only)<br>`GET /api/terms` (Signed-in), `POST`, `PUT`, `DELETE /api/terms/:id` (Admin)<br>`/api/time-slots` CRUD (Public, legacy) |
 | 3.3 | Manage Teacher (teaching-related tasks, load) | `features/teachers/Teachers.jsx` (`/teachers`) | `modules/teachers/teachers.routes.js`<br>`teachers.controller.js`<br>`teachers.service.js`<br>`teachers.validation.js` (load 4–5, ancillary tasks)<br>`teacherTasks.routes.js`<br>`teacherTasks.controller.js`<br>`teacherTasks.service.js` | `GET /api/teachers`, `/api/teachers/:id` (Signed-in)<br>`POST`, `PUT /api/teachers/:id` (Admin, Chair, MT)<br>`DELETE /api/teachers/:id` (Admin)<br>`/api/teacher-tasks` – same access pattern |
 | 3.4 | Manage Section | `features/sections/Sections.jsx` (`/sections`) | `modules/sections/sections.routes.js`<br>`sections.controller.js`<br>`sections.service.js`<br>`sections.validation.js`<br>`gradeLevels.routes.js`<br>`gradeLevels.controller.js`<br>`departments.routes.js`<br>`departments.controller.js` | `/api/sections` CRUD (Public)<br>`/api/grade-levels` CRUD (Public)<br>`/api/departments` CRUD (Public) |
 | 4.1 | Subjects | `features/subjects/Subjects.jsx` (`/subjects`) | `modules/subjects/subjects.routes.js`<br>`subjects.controller.js`<br>`subjects.service.js`<br>`subjects.validation.js` | `/api/subjects` CRUD (Public) |
@@ -39,21 +39,27 @@ Conflicts are checked at three levels:
 
 | Level | File | What it does |
 |---|---|---|
-| Browser (real time) | `client/src/features/schedules/SchedulePlotter.jsx` | 350 ms after each edit, sends the draft to `POST /api/class-programs/validate` and lists conflicts and teacher-load warnings |
-| API | `server/src/modules/schedules/conflict.service.js` | `findClassProgramConflicts` – teacher / room / section overlaps for 45-minute JHS periods, against saved schedules and within the draft<br>`getTeacherLoadWarnings`, `getTeacherWarnings` – distinct subjects per teacher compared with `max_subject_load` (default 5)<br>`findLegacyScheduleConflict` – teacher / room / section clash on the same day and time slot for `/api/schedules` |
-| Database | `server/src/db/migrations/scheduleConflictGuards.migration.js` | GiST exclusion constraints that block overlapping JHS entries for the same teacher, room or section, plus triggers that check `schedules` rows against each other and against JHS entries |
+| Browser (real time) | `client/src/features/schedules/SchedulePlotter.jsx` | 350 ms after each edit, sends the week to `POST /api/schedules/check-conflicts` and lists every conflict (with free rooms for Senior High) and the teacher loads |
+| API | `server/src/modules/schedules/conflict.service.js` | `checkConflicts(entry)` / `checkConflictsForEntries(entries)` load the term once (`loadConflictContext`) and run the pure `detectConflicts`: teacher, room and section overlaps, one teacher per subject per section, subject grade level, teacher load (`max_subject_load` default 5, `weekly_load_minutes`) and department time rules (`department_time_rules`, defaults JHS 45 min / SHS 60 min, Mon–Fri, 07:00–17:00). Called before every save, and by Auto-Generate |
+| Database | `server/src/db/migrations/scheduleConflictGuards.migration.js` | Exclusion constraints on `schedule_entries`: within a term, no two non-rejected rows may share a teacher, room or section on the same day with overlapping `int4range(start_min, end_min)`. Older guards on `jhs_class_program_entries` / `schedules` are kept for their existing rows |
+
+A blocked delete (`ON DELETE RESTRICT`, SQLSTATE 23001) and a database-level overlap (23P01) are both turned into a readable `409` by `server/src/utils/httpError.js`.
 
 ## Shared code
 
 | Concern | Location |
 |---|---|
-| Server entry point and route mounting | `server/server.js` |
+| Server entry point (migrations, listen) | `server/server.js` |
+| Express app and route mounting | `server/src/app.js` |
+| Errors → HTTP responses (409 for conflicts and blocked deletes) | `server/src/utils/httpError.js` |
+| Schedule data model (terms, schedule_entries, approval_logs, ...) | `server/src/db/migrations/scheduleEntries.migration.js` |
 | Database connection | `server/src/config/database.js` |
 | Email (account recovery) | `server/src/config/mailer.js` |
 | Login and role checks | `server/src/middleware/authMiddleware.js` (`authenticateUser`, `authorizeRoles`) |
 | Startup schema migrations | `server/src/db/migrations/` |
 | First-time setup (tables, roles, admin) | `server/src/db/seeds/init_database.js` – `npm run db:init` |
-| Database tests | `server/tests/db/` – `npm run test:db` |
+| Unit + integration tests | `server/tests/unit/`, `server/tests/integration/` – `npm test` (integration tests use a separate `<DB_NAME>_test` database) |
+| Database smoke tests (real database, rolled back) | `server/tests/db/` – `npm run test:db` |
 | Original ERD schema (reference only, outdated) | `server/src/db/reference/class_scheduling.sql` |
 | Client routes | `client/src/App.jsx` |
 | Page shell, sidebar, dashboard widgets | `client/src/components/` |
