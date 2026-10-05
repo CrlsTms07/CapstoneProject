@@ -19,7 +19,7 @@ Account recovery email setup
 - Configure SMTP with `SMTP_HOST`, `SMTP_PORT` (usually `587`), `SMTP_SECURE` (`false` for STARTTLS on port 587, `true` for implicit TLS on port 465), `SMTP_USER`, `SMTP_PASS`, and `MAIL_FROM`.
 - Set `ADMIN_DASHBOARD_URL` to the externally reachable admin dashboard URL used in recovery notifications. If omitted, it uses `${FRONTEND_URL}/admin`.
 - Restart the backend after setting environment variables. Recovery requests are stored even if notification delivery fails; approval is not committed unless the temporary-password email is accepted by SMTP.
-- The backend creates `password_reset_requests` and the temporary-password account columns at startup. Fresh database installations also get them from `server/scripts/init_database.js`.
+- The backend creates `password_reset_requests` and the temporary-password account columns at startup. Fresh database installations also get them from `server/src/db/seeds/init_database.js` (`npm run db:init`).
 - Temporary passwords expire after 24 hours and require the user to set a new password before protected portal API access is allowed.
 
 Heroku quick steps:
