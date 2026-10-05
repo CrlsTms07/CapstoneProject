@@ -1,6 +1,7 @@
 // HIPO 4.2 – Rooms & Buildings
 // Room CRUD (room number + building).
 const pool = require("../../config/database");
+const { sendError } = require("../../utils/httpError");
 
 // GET all rooms
 const getRooms = async (req, res) => {
@@ -175,12 +176,8 @@ const deleteRoom = async (req, res) => {
             room: result.rows[0]
         });
     } catch (error) {
-        console.error("Error deleting room:", error);
-
-        res.status(500).json({
-            error: "Failed to delete room",
-            details: error.message
-        });
+        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
+        sendError(res, error, { action: "delete" });
     }
 };
 
