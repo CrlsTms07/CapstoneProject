@@ -1,7 +1,10 @@
+// HIPO 2.0 – Login / 4.3 Users & Roles (database seed)
+// One-time setup: creates the base tables, seeds the default roles and the admin account.
+// Run from server/: npm run db:init
 require("dotenv").config();
 
 const bcrypt = require("bcrypt");
-const pool = require("../src/config/database");
+const pool = require("../../config/database");
 
 const initDatabase = async () => {
     try {

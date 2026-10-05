@@ -1,5 +1,7 @@
+// HIPO 3.2 – Schedule Plotter (database test)
+// Smoke test: PostgreSQL must reject an overlapping JHS class-program entry. Rolls back.
 require('dotenv').config()
-const pool = require('../src/config/database')
+const pool = require('../../src/config/database')
 
 const run = async () => {
   const client = await pool.connect()

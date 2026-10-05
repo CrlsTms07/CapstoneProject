@@ -1,5 +1,7 @@
+// HIPO 3.2 – Schedule Plotter (database test)
+// Verifies the JHS class-program tables, triggers and exclusion constraints exist.
 require('dotenv').config()
-const pool = require('../src/config/database')
+const pool = require('../../src/config/database')
 
 const verify = async () => {
   try {

@@ -1,3 +1,6 @@
+-- REFERENCE ONLY – original ERD schema from the paper. OUTDATED: the live schema is created by
+-- src/db/seeds/init_database.js and src/db/migrations/*. Do NOT run this file: it drops all tables.
+
 
 /*CLASS SCHEDULING SYSTEM
 DATABASE: class_scheduling
