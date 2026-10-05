@@ -1,13 +1,7 @@
-const pool = require("../config/database");
-const ALLOWED_ANCILLARY_TASKS = new Set(["ICT Coordinator", "SSG Coordinator", "Lab Manager"]);
-
-const normalizeAncillaryTasks = tasks => {
-    if (tasks === undefined) return [];
-    if (!Array.isArray(tasks) || tasks.some(task => !ALLOWED_ANCILLARY_TASKS.has(task))) return null;
-    return [...new Set(tasks)];
-};
-
-const validMaxSubjectLoad = value => value === undefined || value === null || value === '' || (Number.isInteger(Number(value)) && Number(value) >= 4 && Number(value) <= 5);
+// HIPO 3.3 – Manage Teacher
+// Teacher records: max subject load, weekly load minutes and ancillary tasks.
+const pool = require("../../config/database");
+const { normalizeAncillaryTasks, validMaxSubjectLoad } = require("./teachers.validation");
 
 // GET all teachers
 const getTeachers = async (req, res) => {

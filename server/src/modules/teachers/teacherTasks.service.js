@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 3.3 – Manage Teacher (teaching-related tasks)
+// Data access for the teacher_tasks table.
+const pool = require("../../config/database");
 
 // GET all teacher tasks
 const getAllTeacherTasks = async () => {

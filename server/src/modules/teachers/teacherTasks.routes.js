@@ -1,3 +1,5 @@
+// HIPO 3.3 – Manage Teacher (teaching-related tasks)
+// Routes: /api/teacher-tasks
 const express = require("express");
 
 const {
@@ -6,12 +8,12 @@ const {
     createTeacherTaskRecord,
     updateTeacherTaskRecord,
     deleteTeacherTaskRecord
-} = require("../controllers/teacherTasksControllers");
+} = require("./teacherTasks.controller");
 
 const {
     authenticateUser,
     authorizeRoles
-} = require("../middleware/authMiddleware");
+} = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 

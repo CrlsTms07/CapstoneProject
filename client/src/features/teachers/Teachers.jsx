@@ -1,7 +1,9 @@
+// HIPO 3.3 – Manage Teacher
+// Faculty directory: create/edit teachers, subject load and ancillary tasks.
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import '../styles/adminDashboard.css'
+import StaffLayout from '../../components/StaffLayout'
+import '../../styles/adminDashboard.css'
 
 const ANCILLARY_TASKS = ['ICT Coordinator', 'SSG Coordinator', 'Lab Manager']
 

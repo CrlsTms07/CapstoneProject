@@ -11,8 +11,8 @@ module.exports = {
     schedulesControllers: require('./schedulesControllers'),
     sectionsControllers: require('./sectionsControllers'),
     subjectsControllers: require('./subjectsControllers'),
-    teachersControllers: require('./teachersControllers'),
-    teacherTasksControllers: require('./teacherTasksControllers'),
+    teachersControllers: require('../modules/teachers/teachers.controller'),
+    teacherTasksControllers: require('../modules/teachers/teacherTasks.controller'),
     timeSlotsControllers: require('./timeSlotsControllers'),
     usersControllers: require('../modules/users/users.controller')
 };

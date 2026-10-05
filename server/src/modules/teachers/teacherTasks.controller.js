@@ -1,10 +1,12 @@
+// HIPO 3.3 – Manage Teacher (teaching-related tasks)
+// CRUD for teacher_tasks (table currently stores only teacher_id; ancillary tasks live on teachers).
 const {
     getAllTeacherTasks,
     getTeacherTaskById,
     createTeacherTask,
     updateTeacherTask,
     deleteTeacherTask
-} = require("../models/teacherTasksModel");
+} = require("./teacherTasks.service");
 
 // GET all teacher tasks
 const getTeacherTasks = async (req, res) => {

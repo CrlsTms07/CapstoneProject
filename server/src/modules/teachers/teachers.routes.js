@@ -1,3 +1,5 @@
+// HIPO 3.3 – Manage Teacher
+// Routes: /api/teachers (read: signed-in users; create/update: admin, chair, master teacher; delete: admin).
 const express = require("express");
 
 const {
@@ -6,12 +8,12 @@ const {
     createTeacher,
     updateTeacher,
     deleteTeacher
-} = require("../controllers/teachersControllers");
+} = require("./teachers.controller");
 
 const {
     authenticateUser,
     authorizeRoles
-} = require("../middleware/authMiddleware");
+} = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 

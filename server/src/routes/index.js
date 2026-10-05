@@ -14,8 +14,8 @@ module.exports = {
     schedulesRoutes: require('./schedulesRoutes'),
     sectionsRoutes: require('./sectionsRoutes'),
     subjectsRoutes: require('./subjectsRoutes'),
-    teachersRoutes: require('./teachersRoutes'),
-    teacherTasksRoutes: require('./teacherTasksRoutes'),
+    teachersRoutes: require('../modules/teachers/teachers.routes'),
+    teacherTasksRoutes: require('../modules/teachers/teacherTasks.routes'),
     timeSlotsRoutes: require('./timeSlotsRoutes'),
     usersRoutes: require('../modules/users/users.routes')
 };
