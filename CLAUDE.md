@@ -39,6 +39,8 @@ profile (9.0) · public (10.0)
 - routes = paths + auth middleware only · controller = req/res and HTTP status codes ·
   service = SQL / data access · validation = pure checks, no DB.
 - Many controllers still contain inline SQL; when you touch one, move its SQL into the service.
+- Errors go through `sendError` / `handle` from `src/utils/httpError.js`. Delete handlers pass
+  `{ action: "delete" }` so a record still used by schedules (ON DELETE RESTRICT) answers 409, not 500.
 - **Conflict detection** belongs only in `src/modules/schedules/conflict.service.js` (API) and
   `src/db/migrations/scheduleConflictGuards.migration.js` (database). Change both together.
 - Schedules live in `schedule_entries` (term, section, subject, teacher, room, day, `start_min`–`end_min`
