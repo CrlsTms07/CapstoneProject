@@ -1,7 +1,9 @@
+// HIPO 4.3 – Users & Roles
+// Admin page: list, create, edit, delete and approve user accounts.
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import '../styles/adminDashboard.css'
+import StaffLayout from '../../components/StaffLayout'
+import '../../styles/adminDashboard.css'
 
 export default function Users({ user }) {
   const [users, setUsers] = useState([])

@@ -1,3 +1,5 @@
+// HIPO 4.3 – Users & Roles (admin only)
+// Routes: /api/users (CRUD), GET /api/users/pending, POST /api/users/:id/approve
 const express = require("express");
 
 const router = express.Router();
@@ -8,13 +10,13 @@ const {
     createUser,
     updateUser,
     deleteUser
-} = require("../controllers/usersControllers");
-const { getPendingUsers, approveUser } = require("../controllers/usersControllers");
+} = require("./users.controller");
+const { getPendingUsers, approveUser } = require("./users.controller");
 
 const {
     authenticateUser,
     authorizeRoles
-} = require("../middleware/authMiddleware");
+} = require("../../middleware/authMiddleware");
 
 // All user-management routes require authentication
 router.use(authenticateUser);

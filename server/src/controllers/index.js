@@ -5,7 +5,7 @@ module.exports = {
     departmentsControllers: require('./departmentsControllers'),
     gradeLevelsControllers: require('./gradeLevelsControllers'),
     publicSchedulesControllers: require('./publicSchedulesControllers'),
-    rolesControllers: require('./rolesControllers'),
+    rolesControllers: require('../modules/users/roles.controller'),
     roomsControllers: require('./roomsControllers'),
     scheduleApprovalsControllers: require('./scheduleApprovalsControllers'),
     schedulesControllers: require('./schedulesControllers'),
@@ -14,5 +14,5 @@ module.exports = {
     teachersControllers: require('./teachersControllers'),
     teacherTasksControllers: require('./teacherTasksControllers'),
     timeSlotsControllers: require('./timeSlotsControllers'),
-    usersControllers: require('./usersControllers')
+    usersControllers: require('../modules/users/users.controller')
 };

@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 4.3 – Users & Roles
+// Role CRUD and the public role list.
+const pool = require("../../config/database");
 
 // GET all roles
 const getRoles = async (req, res) => {

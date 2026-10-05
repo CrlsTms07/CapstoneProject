@@ -1,3 +1,5 @@
+// HIPO 4.3 – Users & Roles
+// Routes: /api/roles (read: any signed-in user; write: admin).
 const express = require("express");
 
 const {
@@ -6,12 +8,12 @@ const {
     createRole,
     updateRole,
     deleteRole
-} = require("../controllers/rolesControllers");
+} = require("./roles.controller");
 
 const {
     authenticateUser,
     authorizeRoles
-} = require("../middleware/authMiddleware");
+} = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 

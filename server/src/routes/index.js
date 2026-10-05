@@ -6,8 +6,8 @@ module.exports = {
     departmentsRoutes: require('./departmentsRoutes'),
     gradeLevelsRoutes: require('./gradeLevelsRoutes'),
     publicSchedulesRoutes: require('./publicSchedulesRoutes'),
-    publicRolesRoutes: require('./publicRolesRoutes'),
-    rolesRoutes: require('./rolesRoutes'),
+    publicRolesRoutes: require('../modules/users/roles.public.routes'),
+    rolesRoutes: require('../modules/users/roles.routes'),
     roomsRoutes: require('./roomsRoutes'),
     scheduleApprovalsRoutes: require('./scheduleApprovalsRoutes'),
     classProgramsRoutes: require('./classProgramsRoutes'),
@@ -17,5 +17,5 @@ module.exports = {
     teachersRoutes: require('./teachersRoutes'),
     teacherTasksRoutes: require('./teacherTasksRoutes'),
     timeSlotsRoutes: require('./timeSlotsRoutes'),
-    usersRoutes: require('./usersRoutes')
+    usersRoutes: require('../modules/users/users.routes')
 };
