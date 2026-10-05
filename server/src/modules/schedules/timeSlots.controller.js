@@ -1,6 +1,7 @@
 // HIPO 3.2 – Schedule Plotter (time slots)
 // Time slot CRUD (start time + department) used by legacy schedules.
 const pool = require("../../config/database");
+const { sendError } = require("../../utils/httpError");
 
 // GET all time slots
 const getTimeSlots = async (req, res) => {
@@ -175,12 +176,8 @@ const deleteTimeSlot = async (req, res) => {
             time_slot: result.rows[0]
         });
     } catch (error) {
-        console.error("Error deleting time slot:", error);
-
-        res.status(500).json({
-            error: "Failed to delete time slot",
-            details: error.message
-        });
+        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
+        sendError(res, error, { action: "delete" });
     }
 };
 
