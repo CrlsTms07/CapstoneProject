@@ -1,17 +1,23 @@
 const pool = require("../config/database");
+const ALLOWED_ANCILLARY_TASKS = new Set(["ICT Coordinator", "SSG Coordinator", "Lab Manager"]);
+
+const normalizeAncillaryTasks = tasks => {
+    if (tasks === undefined) return [];
+    if (!Array.isArray(tasks) || tasks.some(task => !ALLOWED_ANCILLARY_TASKS.has(task))) return null;
+    return [...new Set(tasks)];
+};
+
+const validMaxSubjectLoad = value => value === undefined || value === null || value === '' || (Number.isInteger(Number(value)) && Number(value) >= 4 && Number(value) <= 5);
 
 // GET all teachers
 const getTeachers = async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                teacher_id,
-                user_id,
-                last_name,
-                max_subject_load,
-                weekly_load_minutes
-            FROM teachers
-            ORDER BY teacher_id
+            SELECT t.teacher_id, t.user_id, u.full_name, t.last_name,
+                   t.max_subject_load, t.weekly_load_minutes, t.ancillary_tasks
+            FROM teachers t
+            JOIN users u ON u.user_id = t.user_id
+            ORDER BY t.teacher_id
         `);
 
         res.status(200).json(result.rows);
@@ -31,7 +37,7 @@ const getTeacherById = async (req, res) => {
         const { id } = req.params;
 
         const result = await pool.query(
-            `SELECT teacher_id, user_id, last_name, max_subject_load, weekly_load_minutes FROM teachers WHERE teacher_id = $1`,
+            `SELECT teacher_id, user_id, last_name, max_subject_load, weekly_load_minutes, ancillary_tasks FROM teachers WHERE teacher_id = $1`,
             [id]
         );
 
@@ -68,8 +74,13 @@ const createTeacher = async (req, res) => {
             user_id,
             last_name,
             max_subject_load,
-            weekly_load_minutes
+            weekly_load_minutes,
+            ancillary_tasks: requestedTasks
         } = req.body;
+        const ancillary_tasks = normalizeAncillaryTasks(requestedTasks);
+
+        if (ancillary_tasks === null) return res.status(400).json({ error: "Ancillary tasks must be ICT Coordinator, SSG Coordinator, or Lab Manager." });
+        if (!validMaxSubjectLoad(max_subject_load)) return res.status(400).json({ error: "Maximum subject load must be 4 or 5." });
 
         if (
             user_id === undefined ||
@@ -88,22 +99,25 @@ const createTeacher = async (req, res) => {
                     user_id,
                     last_name,
                     max_subject_load,
-                    weekly_load_minutes
+                    weekly_load_minutes,
+                    ancillary_tasks
                 )
             VALUES
-                ($1, $2, $3, $4)
+                ($1, $2, $3, $4, $5)
             RETURNING
                 teacher_id,
                 user_id,
                 last_name,
                 max_subject_load,
-                weekly_load_minutes
+                weekly_load_minutes,
+                ancillary_tasks
             `,
             [
                 user_id,
                 last_name,
                 max_subject_load ?? null,
-                weekly_load_minutes ?? null
+                weekly_load_minutes ?? null,
+                ancillary_tasks
             ]
         );
 
@@ -127,8 +141,13 @@ const updateTeacher = async (req, res) => {
             user_id,
             last_name,
             max_subject_load,
-            weekly_load_minutes
+            weekly_load_minutes,
+            ancillary_tasks: requestedTasks
         } = req.body;
+        const ancillary_tasks = normalizeAncillaryTasks(requestedTasks);
+
+        if (ancillary_tasks === null) return res.status(400).json({ error: "Ancillary tasks must be ICT Coordinator, SSG Coordinator, or Lab Manager." });
+        if (!validMaxSubjectLoad(max_subject_load)) return res.status(400).json({ error: "Maximum subject load must be 4 or 5." });
 
         if (
             user_id === undefined ||
@@ -147,20 +166,23 @@ const updateTeacher = async (req, res) => {
                 user_id = $1,
                 last_name = $2,
                 max_subject_load = $3,
-                weekly_load_minutes = $4
-            WHERE teacher_id = $5
+                weekly_load_minutes = $4,
+                ancillary_tasks = $5
+            WHERE teacher_id = $6
             RETURNING
                 teacher_id,
                 user_id,
                 last_name,
                 max_subject_load,
-                weekly_load_minutes
+                weekly_load_minutes,
+                ancillary_tasks
             `,
             [
                 user_id,
                 last_name,
                 max_subject_load ?? null,
                 weekly_load_minutes ?? null,
+                ancillary_tasks,
                 id
             ]
         );

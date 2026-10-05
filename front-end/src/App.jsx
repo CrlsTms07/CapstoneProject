@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import AdminDashboard from './pages/AdminDashboard'
 import ChairDashboard from './pages/ChairDashboard'
 import MasterTeacherDashboard from './pages/MasterTeacherDashboard'
@@ -8,10 +8,21 @@ import PublicView from './pages/PublicView'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
+import ChangePasswordRequired from './pages/ChangePasswordRequired'
+import SchedulePlotter from './pages/SchedulePlotter'
+import Teachers from './pages/Teachers'
+import Sections from './pages/Sections'
+import Subjects from './pages/Subjects'
+import Rooms from './pages/Rooms'
+import Users from './pages/Users'
+import Reports from './pages/Reports'
+import ScheduleApprovals from './pages/ScheduleApprovals'
+import SubmittedSchedules from './pages/SubmittedSchedules'
 
 function App() {
   const [user, setUser] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     // detect current user via session
@@ -33,8 +44,15 @@ function App() {
   }, [])
 
   useEffect(() => {
-    // route to appropriate dashboard after user detection
+    // Route new sessions from public entry pages, but preserve requested workspace pages.
     if (!user) return
+
+    if (user.must_change_password) {
+      navigate('/change-password-required')
+      return
+    }
+
+    if (!['/', '/login', '/signup'].includes(location.pathname)) return
 
     switch (user.role_id) {
       case 1:
@@ -52,7 +70,7 @@ function App() {
       default:
         navigate('/')
     }
-  }, [user, navigate])
+  }, [user, location.pathname, navigate])
 
   return (
     <Routes>
@@ -60,10 +78,20 @@ function App() {
       <Route path="/login" element={<Login onLogin={setUser} />} />
       <Route path="/signup" element={<Signup onLogin={setUser} />} />
       <Route path="/forgot" element={<ForgotPassword />} />
+      <Route path="/change-password-required" element={<ChangePasswordRequired onPasswordChanged={() => setUser(current => current ? { ...current, must_change_password: false } : current)} />} />
       <Route path="/admin" element={<AdminDashboard user={user} />} />
       <Route path="/chair" element={<ChairDashboard user={user} />} />
       <Route path="/master-teacher" element={<MasterTeacherDashboard user={user} />} />
       <Route path="/teacher" element={<TeacherDashboard user={user} />} />
+      <Route path="/plot-schedule" element={<SchedulePlotter user={user} />} />
+      <Route path="/teachers" element={<Teachers user={user} />} />
+      <Route path="/sections" element={<Sections user={user} />} />
+      <Route path="/subjects" element={<Subjects user={user} />} />
+      <Route path="/rooms" element={<Rooms user={user} />} />
+      <Route path="/users" element={<Users user={user} />} />
+      <Route path="/reports" element={<Reports user={user} />} />
+      <Route path="/schedule-approvals" element={<ScheduleApprovals user={user} />} />
+      <Route path="/submitted-schedules" element={<SubmittedSchedules user={user} />} />
     </Routes>
   )
 }

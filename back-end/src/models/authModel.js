@@ -14,7 +14,10 @@ const findUserByEmail = async (email) => {
             u.role_id,
             r.role_name,
             u.department_id,
-            u.is_approved
+            u.assigned_grade_level_id,
+            u.is_approved,
+            u.must_change_password,
+            u.temporary_password_expires_at
         FROM users u
         LEFT JOIN roles r
             ON u.role_id = r.role_id

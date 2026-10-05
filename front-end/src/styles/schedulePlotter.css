@@ -1,0 +1,151 @@
+@tailwind utilities;
+.schedule-plotter{--plot-brand:#6b1d2f;--plot-brand-dark:#3f101a;--plot-line:#e7e6e8;--plot-ink:#29272b;--plot-muted:#777780;color:var(--plot-ink)}
+.plotter-interface{display:grid;gap:14px;padding-bottom:28px}
+.plotter-toolbar,.plotter-panel{border:1px solid var(--plot-line);border-radius:12px;background:#fff;box-shadow:0 3px 13px rgba(35,24,28,.045)}
+.plotter-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:14px}
+.plotter-selectors,.plotter-actions{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap}
+.plotter-selectors label,.plotter-fields label{display:grid;min-width:145px;gap:6px;color:#66616a;font-size:10px;font-weight:700}
+.plotter-selectors select,.plotter-fields input{box-sizing:border-box;width:100%;height:37px;padding:0 10px;border:1px solid #dedde1;border-radius:7px;background:#fff;color:#343138;font:inherit;font-size:12px;outline:none}
+.plotter-selectors select:focus,.plotter-fields input:focus,.plotter-editor-table input:focus{border-color:#9c6572;box-shadow:0 0 0 3px rgba(107,29,47,.09)}
+.plotter-paper-select{min-width:180px!important}
+.plotter-actions{align-items:center;justify-content:flex-end}
+.plotter-save-status{min-width:125px;color:var(--plot-muted);font-size:10px;text-align:right}
+.plotter-button{display:inline-flex;min-height:36px;align-items:center;justify-content:center;gap:7px;padding:0 11px;border:1px solid #e4dadd;border-radius:8px;background:#fff;color:#5b4e52;font:inherit;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.plotter-button:hover{border-color:#c9aeb4;background:#fbf5f6;color:var(--plot-brand)}
+.plotter-button-primary{border-color:var(--plot-brand);background:var(--plot-brand);color:#fff}
+.plotter-button-primary:hover{border-color:var(--plot-brand-dark);background:var(--plot-brand-dark);color:#fff}
+.plotter-button-print{border-color:#397858;background:#397858;color:#fff}
+.plotter-button-print:hover{border-color:#286243;background:#286243;color:#fff}
+.plotter-view-tabs{display:flex;width:max-content;gap:3px;padding:4px;border:1px solid #e7e4e6;border-radius:9px;background:#f0eff1}
+.plotter-view-tabs button{min-width:100px;padding:8px 12px;border:0;border-radius:6px;background:transparent;color:#717078;font:inherit;font-size:11px;font-weight:650;cursor:pointer}
+.plotter-view-tabs button.active{background:#fff;color:var(--plot-brand);box-shadow:0 1px 4px rgba(31,25,27,.12)}
+.plotter-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.plotter-summary article{display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:14px 16px;border:1px solid #e8e5e7;border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(31,25,27,.035)}
+.plotter-summary article span{align-self:center;color:#77747c;font-size:10px;font-weight:650}
+.plotter-summary article strong{grid-row:span 2;color:var(--plot-brand);font-size:23px;line-height:1.15}
+.plotter-summary article small{color:#939098;font-size:10px}
+.plotter-panel{overflow:hidden}
+.plotter-panel-heading{display:flex;min-height:61px;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-bottom:1px solid #efedef}
+.plotter-panel-heading>div>span{display:block;margin-bottom:4px;color:#9b7d85;font-size:9px;font-weight:750;letter-spacing:1px}
+.plotter-panel-heading h2{margin:0;color:#38343a;font-family:Georgia,"Times New Roman",serif;font-size:16px;font-weight:700}
+.plotter-scope-badge{padding:6px 9px;border-radius:20px;background:#f7edef;color:var(--plot-brand);font-size:10px;font-weight:700}
+.plotter-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;padding:16px}
+.plotter-fields label{min-width:0}
+.plotter-fields input{height:38px;font-weight:450}
+.plotter-field-wide{grid-column:span 2}
+.plotter-logo-settings{margin:0 16px 14px;border-top:1px solid #efedef;color:#625b63;font-size:11px}
+.plotter-logo-settings summary{width:max-content;padding:11px 0 0;color:var(--plot-brand);font-weight:700;cursor:pointer}
+.plotter-logo-settings .plotter-fields{padding:12px 0 0;grid-template-columns:repeat(2,minmax(0,1fr))}
+.plotter-rows-panel .plotter-panel-heading{align-items:center}
+.plotter-table-scroll{overflow:auto}
+.plotter-editor-table{width:100%;min-width:1360px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.plotter-editor-table th,.plotter-editor-table td{padding:8px;border-right:1px solid #eeecee;border-bottom:1px solid #eeecee;text-align:left;vertical-align:middle}
+.plotter-editor-table th{background:#f8f5f6;color:#69636a;font-size:9px;font-weight:750;text-transform:uppercase}
+.plotter-editor-table thead tr:first-child th{text-align:center;background:#f2e8ea;color:var(--plot-brand)}
+.plotter-editor-table td{background:#fff}
+.plotter-editor-table input{box-sizing:border-box;width:100%;min-width:0;height:34px;padding:0 7px;border:1px solid #e5e3e6;border-radius:5px;background:white;color:#302d32;font:inherit;font-size:11px;outline:none}
+.plotter-editor-table input[type=number]{min-width:56px}
+.plotter-editor-table td:nth-child(1),.plotter-editor-table td:nth-child(5){width:132px}
+.plotter-editor-table td:nth-child(2),.plotter-editor-table td:nth-child(6){width:70px}
+.plotter-editor-table td:nth-child(4),.plotter-editor-table td:nth-child(9){width:62px}
+.plotter-editor-table td:nth-child(8){width:195px}
+.plotter-row-actions{white-space:nowrap;text-align:center!important}
+.plotter-row-actions button{width:25px;height:26px;margin:0 1px;border:1px solid #e7e3e5;border-radius:5px;background:#fff;color:#71646a;font-size:14px;cursor:pointer}
+.plotter-row-actions button:disabled{opacity:.35;cursor:default}
+.plotter-row-actions .plotter-delete-row{border-color:#f0dadd;color:#a33b45;font-size:18px}
+.plotter-row-number{text-align:center!important;color:#89848b;font-size:10px}
+.plotter-editor-table tfoot th,.plotter-editor-table tfoot td{background:#f8f5f6;color:#5c3440;font-size:10px;font-weight:750}
+.plotter-preview-wrap{display:grid;gap:12px;justify-items:center;padding:10px 0 30px;background:#eeedf0}
+.plotter-preview-note{display:flex;width:min(100% - 28px,8.5in);align-items:center;gap:8px;color:#68636b;font-size:11px}
+.plotter-preview-note button{margin-left:auto;padding:6px 9px;border:1px solid #dedade;border-radius:6px;background:#fff;color:var(--plot-brand);font:inherit;font-size:10px;font-weight:700;cursor:pointer}
+.plot-print{box-sizing:border-box;width:100%;max-width:8.5in;min-height:11in;padding:.42in .4in;background:#fff;color:#111;font-family:"Times New Roman",serif;font-size:10pt;box-shadow:0 7px 24px rgba(20,15,18,.14)}
+.plot-print-long{min-height:13in}
+.print-official-header{display:grid;grid-template-columns:1fr 3fr 1fr;align-items:center;gap:12px;text-align:center}
+.print-logo{position:relative;display:grid;width:70px;height:70px;place-items:center;justify-self:center;overflow:hidden;border:1px solid #c8c8c8;border-radius:50%;color:#555;font-family:Arial,sans-serif;font-size:7px;font-weight:700;line-height:1.2}
+.print-logo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
+.print-logo span{position:relative;z-index:0}
+.print-agency-copy{display:grid;gap:3px;font-size:9pt}
+.print-agency-copy strong{font-size:12pt}
+.print-school-heading{margin:12px 0 13px;text-align:center}
+.print-school-heading h1{margin:0 0 3px;font-size:14pt}
+.print-school-heading h2{margin:11px 0 6px;font-size:12pt}
+.print-school-heading p{margin:2px 0;font-size:9pt}
+.print-program-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8pt}
+.print-program-table .print-time-col{width:10%}
+.print-program-table .print-min-col{width:7%}
+.print-program-table .print-subject-col{width:20%}
+.print-program-table .print-teacher-col{width:26%}
+.print-program-table th,.print-program-table td{height:25px;padding:4px;border:1px solid #222;text-align:center;overflow-wrap:anywhere}
+.print-program-table thead th{font-size:7pt}
+.print-program-table .print-subject-cell{text-align:left}
+.print-program-table .print-summary-row th,.print-program-table .print-summary-row td{height:22px;font-weight:700}
+.print-policy{margin:12px 0 21px;font-size:8.5pt}
+.print-signatories{display:grid;grid-template-columns:1fr 1fr;gap:27px 35px}
+.print-signatories>div{display:grid;min-width:0;gap:4px;font-size:8.5pt}
+.print-signatories strong{min-height:17px;margin-top:12px;border-bottom:1px solid #555;text-align:center;font-size:9pt}
+.print-signatories small{text-align:center;font-size:8pt}
+.plotter-print-only{display:none}
+@media(max-width:1000px){.plotter-toolbar{align-items:stretch;flex-direction:column}.plotter-actions{justify-content:flex-start}.plotter-save-status{text-align:left}.plotter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.plotter-summary{grid-template-columns:1fr}.plotter-summary article{grid-template-columns:1fr auto}.plotter-fields{grid-template-columns:1fr;padding:13px}.plotter-field-wide{grid-column:auto}.plotter-logo-settings{margin-right:13px;margin-left:13px}.plotter-logo-settings .plotter-fields{grid-template-columns:1fr}.plotter-panel-heading{align-items:flex-start}.plotter-panel-heading .plotter-button{white-space:normal}.plotter-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.plotter-save-status{grid-column:1/-1}.plotter-button{padding:0 7px;font-size:10px}.plotter-preview-note{width:calc(100% - 24px);font-size:9px}.plotter-preview-wrap .plot-print{width:100%;min-height:0;padding:16px;font-size:8pt}.print-official-header{grid-template-columns:54px 1fr 54px;gap:5px}.print-logo{width:48px;height:48px;font-size:5px}.print-agency-copy{font-size:7pt}.print-agency-copy strong{font-size:9pt}.print-program-table{font-size:6pt}.print-program-table th,.print-program-table td{height:20px;padding:2px}.print-program-table thead th{font-size:5.5pt}.print-signatories{gap:18px 10px}}
+@media print{
+  @page{size:letter portrait;margin:.35in}
+  @page plotter-long{size:8.5in 13in portrait;margin:.35in}
+  html,body,#root{width:100%;min-height:0!important;margin:0!important;padding:0!important;background:#fff!important}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ss-root,.ss-main,.ss-content{display:block!important;width:100%!important;min-height:0!important;margin:0!important;padding:0!important;background:#fff!important}
+  .ss-sidebar,.ss-topbar,.ss-page-heading{display:none!important}
+  .schedule-plotter,.plotter-interface{display:block!important;margin:0!important;padding:0!important;background:#fff!important}
+  .plotter-interface>*{display:none!important}
+  .plotter-print-only{display:block!important}
+  .plot-print{width:100%;max-width:none;min-height:0;margin:0;padding:0;box-shadow:none;font-size:9pt}
+  .plot-print-long{page:plotter-long}
+  .print-program-table{break-inside:auto}
+  .print-program-table thead{display:table-header-group}
+  .print-program-table tr,.print-signatories{break-inside:avoid}
+  .print-logo{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
+.plotter-jhs-editor-table{min-width:1900px}
+.plotter-jhs-editor-table td:nth-child(1),.plotter-jhs-editor-table td:nth-child(7){width:112px}
+.plotter-jhs-editor-table td:nth-child(2),.plotter-jhs-editor-table td:nth-child(8){width:48px;text-align:center}
+.plotter-jhs-editor-table td:nth-child(3),.plotter-jhs-editor-table td:nth-child(9){width:210px}
+.plotter-jhs-editor-table td:nth-child(4),.plotter-jhs-editor-table td:nth-child(10){width:190px}
+.plotter-jhs-editor-table td:nth-child(5),.plotter-jhs-editor-table td:nth-child(6),.plotter-jhs-editor-table td:nth-child(11),.plotter-jhs-editor-table td:nth-child(12){width:145px}
+.plotter-jhs-editor-table td:nth-child(13){width:105px}
+.plotter-editor-table select{box-sizing:border-box;width:100%;min-width:0;min-height:34px;padding:0 7px;border:1px solid #e5e3e6;border-radius:5px;background:#fff;color:#302d32;font:inherit;font-size:10px;outline:none}
+.plotter-editor-table select:focus{border-color:#9c6572;box-shadow:0 0 0 3px rgba(107,29,47,.09)}
+.plotter-fixed-minutes{text-align:center!important;color:#706a72;font-size:10px;font-weight:700}
+.plotter-fixed-note{padding:8px 15px;border-bottom:1px solid #efedef;background:#fbf8f9;color:#786d73;font-size:10px}
+.plotter-program-status,.plotter-warning-badge,.plotter-ok-badge{display:inline-flex;align-items:center;min-height:28px;padding:0 9px;border-radius:18px;font-size:9px;font-weight:750;white-space:nowrap}
+.plotter-program-status{background:#f2eef0;color:#6c6168}
+.plotter-program-status.status-pending{background:#fff4d8;color:#87610d}
+.plotter-program-status.status-approved,.plotter-ok-badge{background:#e8f5ee;color:#237a55}
+.plotter-program-status.status-rejected,.plotter-warning-badge{background:#fff0f0;color:#a33b45}
+.plotter-error,.plotter-feedback{padding:10px 12px;border:1px solid #f0cfd2;border-radius:8px;background:#fff4f4;color:#922d37;font-size:12px}
+.plotter-feedback{border-color:#cfe8d9;background:#f0f8f3;color:#286a49}
+.plotter-load-panel{display:grid;gap:8px;padding:14px 16px;border:1px solid #e8e5e7;border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(31,25,27,.035)}
+.plotter-load-title{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid #efedef}
+.plotter-load-title>div{display:grid;gap:4px}
+.plotter-load-title>div>span{color:#9b7d85;font-size:9px;font-weight:750;letter-spacing:1px}
+.plotter-load-title strong{color:#38343a;font-size:13px}
+.plotter-conflict-line,.plotter-load-help{margin:0;color:#a33b45;font-size:11px}
+.plotter-teacher-load{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:7px 9px;border:1px solid #e8e8ec;border-radius:7px;background:#fbfbfc;color:#5e5960;font-size:10px}
+.plotter-teacher-load strong{color:#37343a}
+.plotter-teacher-load b{padding:3px 7px;border-radius:12px;background:#fff0f0;color:#a33b45}
+.plotter-teacher-load small{flex-basis:100%;color:#8e777d}
+.plotter-teacher-load.overloaded{border-color:#edc9cc;background:#fff7f7}
+.print-room-line{display:block;margin-top:2px;font-size:7pt}
+.schedule-plotter[data-theme="dark"]{--plot-line:#3b3439;--plot-ink:#f0edf0;--plot-muted:#bbb3ba;color:var(--plot-ink)}
+.schedule-plotter[data-theme="dark"] .plotter-toolbar,.schedule-plotter[data-theme="dark"] .plotter-panel,.schedule-plotter[data-theme="dark"] .plotter-summary article,.schedule-plotter[data-theme="dark"] .plotter-load-panel{border-color:#3b3439;background:#231f22;color:#f0edf0}
+.schedule-plotter[data-theme="dark"] .plotter-fields label,.schedule-plotter[data-theme="dark"] .plotter-panel-heading h2,.schedule-plotter[data-theme="dark"] .plotter-load-title strong{color:#e6e0e4}
+.schedule-plotter[data-theme="dark"] .plotter-selectors select,.schedule-plotter[data-theme="dark"] .plotter-fields input,.schedule-plotter[data-theme="dark"] .plotter-editor-table input,.schedule-plotter[data-theme="dark"] .plotter-editor-table select{border-color:#50464d;background:#302a2e;color:#f1ebef}
+.schedule-plotter[data-theme="dark"] .plotter-editor-table td{border-color:#40383e;background:#282327}
+.schedule-plotter[data-theme="dark"] .plotter-editor-table th,.schedule-plotter[data-theme="dark"] .plotter-editor-table tfoot th,.schedule-plotter[data-theme="dark"] .plotter-editor-table tfoot td{border-color:#40383e;background:#342b30;color:#e9dfe4}
+.schedule-plotter[data-theme="dark"] .plotter-editor-table thead tr:first-child th{background:#432b34;color:#f4dfe5}
+.schedule-plotter[data-theme="dark"] .plotter-view-tabs{border-color:#40383e;background:#282327}
+.schedule-plotter[data-theme="dark"] .plotter-view-tabs button{color:#c3b9c0}
+.schedule-plotter[data-theme="dark"] .plotter-view-tabs button.active,.schedule-plotter[data-theme="dark"] .plotter-button{border-color:#51464d;background:#302a2e;color:#f1e9ee}
+.schedule-plotter[data-theme="dark"] .plotter-button-primary{border-color:#7a3448;background:#7a3448;color:#fff}
+.schedule-plotter[data-theme="dark"] .plotter-button-print{border-color:#397858;background:#397858;color:#fff}
+.schedule-plotter[data-theme="dark"] .plotter-fixed-note{border-color:#40383e;background:#2b2529;color:#ccc0c6}
+@media(max-width:1000px){.plotter-actions{display:flex;justify-content:flex-start}.plotter-jhs-editor-table{min-width:1900px}}
+@media(max-width:600px){.plotter-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.plotter-actions .plotter-program-status{grid-column:1/-1}.plotter-teacher-load{align-items:flex-start}.plotter-panel-heading{flex-wrap:wrap}}

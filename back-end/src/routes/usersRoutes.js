@@ -26,6 +26,9 @@ router.get(
     getUsers
 );
 
+// Pending users
+router.get('/pending', authorizeRoles(1), getPendingUsers);
+
 router.get(
     "/:id",
     authorizeRoles(1),
@@ -49,9 +52,6 @@ router.delete(
     authorizeRoles(1),
     deleteUser
 );
-
-// Pending users
-router.get('/pending', authorizeRoles(1), getPendingUsers);
 
 // Approve a pending user
 router.post('/:id/approve', authorizeRoles(1), approveUser);

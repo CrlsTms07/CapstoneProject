@@ -19,6 +19,11 @@
   padding:58px 64px;
   align-self:center;
 }
+.recovery-card{ width:min(100%,560px); max-width:560px; margin:auto; padding:44px 48px; }
+.recovery-card .login-top h2{ color:#65101b; font-size:32px; }
+.recovery-card .login-input:focus{ border-color:#8f1726; box-shadow:0 0 0 3px rgba(143,23,38,.12); }
+.recovery-card select.login-input{ appearance:auto; }
+.recovery-note{ margin:20px 0 0; padding:13px 15px; border-left:3px solid #a91d2b; background:#fff5f5; color:#5d3a3d; font:12px/1.6 Arial,sans-serif; }
 .login-top{ text-align:left; margin-bottom:28px }
 .login-kicker{ margin-bottom:10px; color:#252525; font-family:Arial, sans-serif; font-size:12px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase }
 .login-top h2{ margin:0; color:#191919; font-size:34px; line-height:1.1 }
@@ -53,6 +58,7 @@
   .brand-logo{ width:112px; height:112px; margin-bottom:18px; }
   .brand-copy h1{ font-size:36px; }
   .login-card{ padding:36px 24px; }
+  .recovery-card{ padding:34px 24px; }
 }
 @media (min-width:761px) and (max-width:900px){
   .login-card{ padding-left:34px; padding-right:34px; }

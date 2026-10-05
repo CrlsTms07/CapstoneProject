@@ -1,3 +1,11 @@
+ .admin-recovery-panel{ margin:20px 0; }
+ .admin-recovery-list{ display:grid; gap:12px; width:100%; }
+ .admin-recovery-item{ display:flex; justify-content:space-between; align-items:center; gap:18px; padding:14px; border:1px solid #eadfe0; border-left:3px solid #8f1726; background:#fff; }
+ .admin-recovery-details{ display:grid; gap:5px; min-width:0; color:#454545; font-size:13px; }
+ .admin-recovery-details strong{ color:#65101b; font-size:15px; }
+ .admin-recovery-details span{ overflow-wrap:anywhere; }
+ .admin-recovery-actions{ display:flex; flex:0 0 auto; gap:8px; }
+ @media(max-width:640px){ .admin-recovery-item{ align-items:stretch; flex-direction:column; } .admin-recovery-actions{ justify-content:flex-end; } }
 .admin-root{ padding:20px }
 .admin-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px }
 .admin-sub{ color:var(--muted) }
@@ -20,6 +28,10 @@
 .actions{ display:flex; flex-direction:column; gap:10px }
 .action-btn{ padding:12px; border-radius:10px; border:1px solid rgba(2,6,23,0.06); background:transparent; cursor:pointer; font-weight:600 }
 .action-btn.primary{ background:var(--primary); color:white; border:0; box-shadow:0 8px 24px rgba(11,102,255,0.08) }
+
+.login-input{ box-sizing:border-box; width:100%; min-height:44px; padding:11px 13px; border-radius:5px; border:1px solid #cfcfcf; outline:none; font-family:Inter, ui-sans-serif, system-ui, sans-serif; font-size:14px; color:#1f1f1f; background:#fff; transition:border-color .15s ease, box-shadow .15s ease }
+.login-input:focus{ box-shadow:0 0 0 3px rgba(11,102,255,0.12); border-color:var(--primary) }
+.login-error{ background:#fff5f5; color:#9b1c1c; border:1px solid rgba(156,18,18,0.08); padding:10px 12px; border-radius:8px; margin-bottom:12px; font-size:14px }
 
 @media (max-width:900px){
   .admin-summary{ grid-template-columns: repeat(2,1fr) }

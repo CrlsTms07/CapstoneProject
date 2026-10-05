@@ -56,7 +56,10 @@ const initDatabase = async () => {
                 password_hash VARCHAR(255),
                 role_id INT NOT NULL,
                 department_id INT,
+                assigned_grade_level_id INT,
                 is_approved BOOLEAN DEFAULT FALSE,
+                must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
+                temporary_password_expires_at TIMESTAMPTZ,
                 CONSTRAINT fk_user_role
                     FOREIGN KEY (role_id)
                     REFERENCES roles(role_id)
@@ -66,8 +69,28 @@ const initDatabase = async () => {
                     FOREIGN KEY (department_id)
                     REFERENCES departments(department_id)
                     ON UPDATE CASCADE
-                    ON DELETE CASCADE
+                    ON DELETE CASCADE,
+                CONSTRAINT fk_user_assigned_grade_level
+                    FOREIGN KEY (assigned_grade_level_id)
+                    REFERENCES grade_levels(grade_level_id)
+                    ON UPDATE CASCADE
+                    ON DELETE RESTRICT
             );
+
+            CREATE TABLE IF NOT EXISTS password_reset_requests (
+                request_id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                employee_id VARCHAR(50) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                reason VARCHAR(100) NOT NULL,
+                contact_number VARCHAR(40) NOT NULL,
+                requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+                reviewed_by INT REFERENCES users(user_id) ON DELETE SET NULL,
+                reviewed_at TIMESTAMPTZ
+            );
+            CREATE INDEX IF NOT EXISTS password_reset_requests_pending_idx
+                ON password_reset_requests(status, requested_at);
 
             -- Sections
             CREATE TABLE IF NOT EXISTS sections (
@@ -100,6 +123,7 @@ const initDatabase = async () => {
                 last_name VARCHAR(100) NOT NULL,
                 max_subject_load INT,
                 weekly_load_minutes INT,
+                ancillary_tasks TEXT[] NOT NULL DEFAULT '{}',
                 CONSTRAINT fk_teacher_user
                     FOREIGN KEY (user_id)
                     REFERENCES users(user_id)
@@ -212,6 +236,8 @@ const initDatabase = async () => {
             ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(150);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS school_id VARCHAR(50);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS temporary_password_expires_at TIMESTAMPTZ;
             CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email) WHERE email IS NOT NULL;
             CREATE UNIQUE INDEX IF NOT EXISTS users_school_id_unique ON users (school_id) WHERE school_id IS NOT NULL;
         `);

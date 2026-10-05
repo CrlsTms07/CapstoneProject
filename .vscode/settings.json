@@ -8,6 +8,7 @@
             "askForPassword": true,
             "driver": "PostgreSQL",
             "name": "Class Scheduling",
+            "group": "localhost",
             "database": "class_scheduling",
             "username": "postgres"
         }

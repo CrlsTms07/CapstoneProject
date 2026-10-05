@@ -1,57 +1,54 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
+import { Icon, initialsFor, roleLabelFor } from './DashboardPrimitives'
 import '../styles/staffLayout.css'
 
-const MenuItem = ({ to, icon, label }) => (
-  <NavLink to={to} className={({isActive}) => isActive ? 'ss-menu-item active' : 'ss-menu-item'}>
-    <span className="ss-menu-icon" aria-hidden>{icon}</span>
-    <span className="ss-menu-label">{label}</span>
-  </NavLink>
-)
+const MenuItem = ({ to, icon, label }) => {
+  const location = useLocation()
+  const className = location.hash === to ? 'ss-menu-item active' : 'ss-menu-item'
+  const content = <><span className="ss-menu-icon"><Icon name={icon} size={18} /></span><span className="ss-menu-label">{label}</span></>
+  return to.startsWith('#') ? <a href={to} className={className}>{content}</a> : <NavLink to={to} className={({isActive}) => isActive ? 'ss-menu-item active' : 'ss-menu-item'}>{content}</NavLink>
+}
 
-export default function Sidebar({ user }) {
+export default function Sidebar({ user, query = '' }) {
   if (!user) return null
 
   const role = Number(user.role_id)
 
   const adminMenu = [
-    { to: '/admin', label: 'Dashboard', icon: '📊' },
-    { to: '#', label: 'Schedule Plotter', icon: '📅' },
-    { to: '#', label: 'Teachers', icon: '👩‍🏫' },
-    { to: '#', label: 'Sections', icon: '🏷️' },
-    { to: '#', label: 'Subjects', icon: '📚' },
-    { to: '#', label: 'Rooms & Buildings', icon: '🏛️' },
-    { to: '#', label: 'Users & Roles', icon: '🛡️' },
-    { to: '/schedule-approvals', label: 'Approvals', icon: '✅' },
-    { to: '#', label: 'Reports', icon: '📈' }
+    { to: '/admin', label: 'Overview', icon: 'dashboard' },
+    { to: '/plot-schedule', label: 'Schedule Plotter', icon: 'calendar' },
+    { to: '/teachers', label: 'Faculty Directory', icon: 'users' },
+    { to: '/sections', label: 'Sections', icon: 'sections' },
+    { to: '/subjects', label: 'Subjects', icon: 'books' },
+    { to: '/rooms', label: 'Rooms & Buildings', icon: 'building' },
+    { to: '/users', label: 'Users & Roles', icon: 'shield' },
+    { to: '/schedule-approvals', label: 'Schedule Approvals', icon: 'check' },
+    { to: '/reports', label: 'Reports & Insights', icon: 'chart' }
   ]
 
   const chairMenu = [
-    { to: '/chair', label: 'Dashboard', icon: '📊' },
-    { to: '#', label: 'Schedule Plotter', icon: '📅' },
-    { to: '#', label: 'Teachers', icon: '👩‍🏫' },
-    { to: '#', label: 'Sections', icon: '🏷️' },
-    { to: '#', label: 'Subjects', icon: '📚' },
-    { to: '#', label: 'Rooms & Buildings', icon: '🏛️' },
-    { to: '/submitted-schedules', label: 'Submitted Schedules', icon: '📥' },
-    { to: '#', label: 'Reports', icon: '📈' }
+    { to: '/chair', label: 'Overview', icon: 'dashboard' },
+    { to: '/sections', label: 'Grade Sections', icon: 'sections' },
+    { to: '/teachers', label: 'Faculty Load', icon: 'users' },
+    { to: '/plot-schedule', label: 'Schedule Plotter', icon: 'calendar' },
+    { to: '/submitted-schedules', label: 'Submitted Schedules', icon: 'inbox' },
+    { to: '/reports', label: 'Reports & Insights', icon: 'chart' }
   ]
 
   const masterMenu = [
-    { to: '/master-teacher', label: 'Dashboard', icon: '📊' },
-    { to: '#', label: 'Schedule Plotter', icon: '📅' },
-    { to: '#', label: 'Teachers', icon: '👩‍🏫' },
-    { to: '#', label: 'Sections', icon: '🏷️' },
-    { to: '#', label: 'Subjects', icon: '📚' },
-    { to: '#', label: 'Rooms & Buildings', icon: '🏛️' },
-    { to: '/submitted-schedules', label: 'Submitted Schedules', icon: '📥' },
-    { to: '#', label: 'Reports', icon: '📈' }
+    { to: '/master-teacher', label: 'Overview', icon: 'dashboard' },
+    { to: '/subjects', label: 'Subject Assignments', icon: 'books' },
+    { to: '/submitted-schedules', label: 'Peer Evaluations', icon: 'users' },
+    { to: '/schedule-approvals', label: 'Schedule Approvals', icon: 'check' },
+    { to: '/plot-schedule', label: 'Schedule Plotter', icon: 'calendar' }
   ]
 
   const teacherMenu = [
-    { to: '/teacher', label: 'Dashboard', icon: '📊' },
-    { to: '/teacher', label: 'My Schedule', icon: '📆' },
-    { to: '/teacher', label: 'My Profile', icon: '👤' }
+    { to: '/teacher', label: 'My Overview', icon: 'dashboard' },
+    { to: '#my-schedule', label: 'My Class Schedule', icon: 'calendar' },
+    { to: '#room-assignments', label: 'Room Assignments', icon: 'building' },
+    { to: '#student-lists', label: 'Student Lists', icon: 'users' }
   ]
 
   let menu = []
@@ -60,39 +57,38 @@ export default function Sidebar({ user }) {
   else if (role === 3) menu = masterMenu
   else if (role === 4) menu = teacherMenu
 
-  const initials = (user.username || '')
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .slice(0,2)
+  const filteredMenu = menu.filter(item => item.label.toLowerCase().includes(query.toLowerCase()))
 
   return (
     <aside className="ss-sidebar">
-      <div className="ss-brand">
-        <div className="ss-logo">📘</div>
-        <div>
-          <div className="ss-title">ERCIHS</div>
-          <div className="ss-sub">Class Scheduling System</div>
-          <div className="ss-sub small">S.Y. 2026-2027</div>
+      <div>
+        <div className="ss-brand">
+          <img className="ss-logo" src="https://vote.ercihs.edu.ph/ERCIHS%20LOGO.png" alt="" onError={event => { event.currentTarget.style.display = 'none' }} />
+          <div className="ss-brand-copy">
+            <div className="ss-title">ERCIHS Portal</div>
+            <div className="ss-sub">Academic Services</div>
+          </div>
         </div>
+        <div className="ss-school-year"><span />S.Y. 2026-2027</div>
+        <div className="ss-nav-label">WORKSPACE</div>
+        <nav className="ss-nav" aria-label="Role dashboard navigation">
+          {filteredMenu.length ? filteredMenu.map((item, index) => <MenuItem key={`${item.to}-${index}`} {...item} />) : <p className="ss-no-results">No matching pages</p>}
+        </nav>
       </div>
 
-      <nav className="ss-nav">
-        {menu.map((m, i) => (
-          <MenuItem key={i} to={m.to} icon={m.icon} label={m.label} />
-        ))}
-      </nav>
-
       <div className="ss-user-area">
-        <div className="ss-avatar">{initials}</div>
+        <div className="ss-avatar">{initialsFor(user)}</div>
         <div className="ss-user-info">
-          <div className="ss-username">{user.username}</div>
-          <div className="ss-role">{user.role_name || ('Role ' + user.role_id)}</div>
+          <div className="ss-username">{user.full_name || user.username}</div>
+          <div className="ss-role">{roleLabelFor(user)}</div>
         </div>
-        <button className="ss-logout" onClick={async () => {
-          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
-          window.location.href = '/'
-        }}>Logout</button>
+        <details className="ss-profile-menu">
+          <summary aria-label="Profile actions"><Icon name="chevron" size={17} /></summary>
+          <div className="ss-profile-popover">
+            <NavLink to={role === 1 ? '/users' : role === 2 ? '/chair' : role === 3 ? '/master-teacher' : '/teacher'}>Profile</NavLink>
+            <button onClick={async () => { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); window.location.href = '/' }}><Icon name="logout" size={16} /> Sign out</button>
+          </div>
+        </details>
       </div>
     </aside>
   )

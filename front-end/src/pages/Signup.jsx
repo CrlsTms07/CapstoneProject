@@ -82,8 +82,8 @@ export default function Signup({ onLogin }) {
         <div className="brand-panel" aria-label="School branding">
           <img className="brand-logo" src="https://vote.ercihs.edu.ph/ERCIHS%20LOGO.png" alt="ERCIHS Logo" />
           <div className="brand-copy">
-            <span className="brand-eyebrow">Learner Government Commission</span>
-            <p>Secure <span>•</span> Transparent <span>•</span> Reliable</p>
+            <span className="brand-eyebrow">Academic Personnel Governance</span>
+            <p>Secure <span>•</span> Efficient <span>•</span> Reliable</p>
             <small>EMMANUEL RESURRECCION CONGRESSIONAL INTEGRATED HIGH SCHOOL</small>
           </div>
         </div>

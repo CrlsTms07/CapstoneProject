@@ -2,9 +2,6 @@ const bcrypt = require("bcrypt");
 const { findUserByUsername } = require("../models/authModel");
 const pool = require("../config/database");
 
-// Simple in-memory reset token store for dev flow { username -> { token, expiresAt } }
-const resetTokens = new Map();
-
 // LOGIN
 const login = async (req, res) => {
     try {
@@ -44,6 +41,10 @@ const login = async (req, res) => {
             });
         }
 
+        if (user.must_change_password && user.temporary_password_expires_at && new Date(user.temporary_password_expires_at) <= new Date()) {
+            return res.status(403).json({ error: "Your temporary password has expired. Submit a new account recovery request." });
+        }
+
         // Regenerate session ID after successful authentication
         await new Promise((resolve, reject) => {
             req.session.regenerate((error) => {
@@ -61,9 +62,13 @@ const login = async (req, res) => {
         req.session.user = {
             user_id: user.user_id,
             username: user.username,
+            full_name: user.full_name,
             role_id: user.role_id,
             role_name: user.role_name,
-            department_id: user.department_id
+            department_id: user.department_id,
+            assigned_grade_level_id: user.assigned_grade_level_id,
+            must_change_password: Boolean(user.must_change_password),
+            temporary_password_expires_at: user.temporary_password_expires_at
         };
 
         // Explicitly save session before sending response
@@ -96,11 +101,24 @@ const login = async (req, res) => {
 };
 
 // GET CURRENT LOGGED-IN USER
-const getCurrentUser = (req, res) => {
+const getCurrentUser = async (req, res) => {
     if (!req.session.user) {
         return res.status(401).json({
             error: "Not authenticated."
         });
+    }
+
+    try {
+        const result = await pool.query(
+            "SELECT department_id, assigned_grade_level_id FROM users WHERE user_id = $1",
+            [req.session.user.user_id]
+        );
+        if (result.rows[0]) {
+            req.session.user.department_id = result.rows[0].department_id;
+            req.session.user.assigned_grade_level_id = result.rows[0].assigned_grade_level_id;
+        }
+    } catch (error) {
+        console.error("Unable to refresh user grade assignment:", error.message);
     }
 
     res.status(200).json({
@@ -185,7 +203,7 @@ const signup = async (req, res) => {
         const insertRes = await pool.query(
             `INSERT INTO users (username, full_name, email, school_id, role_id, department_id, password_hash, is_approved)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING user_id, username, full_name, email, school_id, role_id, department_id, is_approved`,
+             RETURNING user_id, username, full_name, email, school_id, role_id, department_id, assigned_grade_level_id, is_approved`,
             [normalizedEmail, full_name.trim(), normalizedEmail, normalizedSchoolId, role_id, department_id || null, hash, isApproved]
         );
 
@@ -203,9 +221,11 @@ const signup = async (req, res) => {
             req.session.user = {
                 user_id: user.user_id,
                 username: user.username,
+                full_name: user.full_name,
                 role_id: user.role_id,
                 role_name: selectedRole.role_name,
-                department_id: user.department_id
+                department_id: user.department_id,
+                assigned_grade_level_id: user.assigned_grade_level_id
             };
 
             await new Promise((resolve, reject) => {
@@ -229,54 +249,33 @@ const signup = async (req, res) => {
 // (module.exports moved below after helper functions)
 
 
-// FORGOT PASSWORD - generate reset token (development flow)
-const forgotPassword = async (req, res) => {
+const changePassword = async (req, res) => {
     try {
-        const { username } = req.body;
-        if (!username) return res.status(400).json({ error: 'username is required' });
-
-        const user = await findUserByUsername(username);
-        if (!user) {
-            // Don't reveal whether user exists
-            return res.status(200).json({ message: 'If the account exists, a reset token was generated.' });
+        const { new_password, confirm_password } = req.body;
+        if (!new_password || !confirm_password) return res.status(400).json({ error: 'New password and confirmation are required.' });
+        if (new_password !== confirm_password) return res.status(400).json({ error: 'Passwords do not match.' });
+        if (!/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(new_password)) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters and include an uppercase letter, number and special character.' });
         }
 
-        const token = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
-        const expiresAt = Date.now() + 1000 * 60 * 15; // 15 minutes
+        const hash = await bcrypt.hash(new_password, 12);
+        const result = await pool.query(
+            `UPDATE users
+             SET password_hash = $1,
+                 must_change_password = FALSE,
+                 temporary_password_expires_at = NULL
+             WHERE user_id = $2
+             RETURNING user_id`,
+            [hash, req.session.user.user_id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Account not found.' });
 
-        resetTokens.set(username, { token, expiresAt });
-
-        console.log(`Password reset token for ${username}: ${token} (expires in 15 minutes)`);
-
-        // In production you'd email the token. Here we return a generic response.
-        return res.status(200).json({ message: 'If the account exists, a reset token was generated.' });
+        req.session.user.must_change_password = false;
+        await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+        return res.status(200).json({ message: 'Password changed successfully.' });
     } catch (error) {
-        console.error('Forgot password error:', error);
-        return res.status(500).json({ error: 'Failed to process forgot password request' });
-    }
-};
-
-// RESET PASSWORD - verify token and set new password
-const resetPassword = async (req, res) => {
-    try {
-        const { username, token, new_password } = req.body;
-        if (!username || !token || !new_password) return res.status(400).json({ error: 'username, token and new_password are required' });
-
-        const entry = resetTokens.get(username);
-        if (!entry || entry.token !== token || Date.now() > entry.expiresAt) {
-            return res.status(400).json({ error: 'Invalid or expired token' });
-        }
-
-        const hash = await bcrypt.hash(new_password, 10);
-
-        await pool.query('UPDATE users SET password_hash = $1 WHERE username = $2', [hash, username]);
-
-        resetTokens.delete(username);
-
-        return res.status(200).json({ message: 'Password updated successfully' });
-    } catch (error) {
-        console.error('Reset password error:', error);
-        return res.status(500).json({ error: 'Failed to reset password' });
+        console.error('Change password error:', error);
+        return res.status(500).json({ error: 'Failed to change password.' });
     }
 };
 
@@ -286,6 +285,5 @@ module.exports = {
     getCurrentUser,
     logout,
     signup,
-    forgotPassword,
-    resetPassword
+    changePassword
 };

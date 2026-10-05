@@ -4,10 +4,11 @@ const {
     login,
     getCurrentUser,
     logout
-    , signup
+    , signup,
+    changePassword
 } = require("../controllers/authControllers");
 
-const { forgotPassword, resetPassword } = require("../controllers/authControllers");
+const { authenticateUserForPasswordChange } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -17,11 +18,8 @@ router.post("/login", login);
 // POST /api/auth/signup
 router.post("/signup", signup);
 
-// POST /api/auth/forgot
-router.post('/forgot', forgotPassword);
-
-// POST /api/auth/reset
-router.post('/reset', resetPassword);
+// POST /api/auth/change-password
+router.post('/change-password', authenticateUserForPasswordChange, changePassword);
 
 // GET /api/auth/me
 router.get("/me", getCurrentUser);

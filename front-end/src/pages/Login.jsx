@@ -33,6 +33,11 @@ export default function Login({ onLogin }) {
       }
 
       const d = await res.json()
+      if (d.user?.must_change_password) {
+        if (onLogin) onLogin(d.user)
+        navigate('/change-password-required', { replace: true })
+        return
+      }
       if (remember) localStorage.setItem('rememberedSchoolEmail', email)
       else localStorage.removeItem('rememberedSchoolEmail')
       setSuccess('Login successful. Redirecting...')
@@ -107,8 +112,8 @@ export default function Login({ onLogin }) {
         <div className="brand-panel" aria-label="School branding">
           <img className="brand-logo" src="https://vote.ercihs.edu.ph/ERCIHS%20LOGO.png" alt="ERCIHS Logo" />
           <div className="brand-copy">
-            <span className="brand-eyebrow">Learner Government Commission</span>
-            <p>Secure <span>•</span> Transparent <span>•</span> Reliable</p>
+            <span className="brand-eyebrow">Academic Personnel Governance</span>
+            <p>Secure <span>•</span> Efficient <span>•</span> Reliable</p>
             <small>EMMANUEL RESURRECCION CONGRESSIONAL INTEGRATED HIGH SCHOOL</small>
           </div>
         </div>

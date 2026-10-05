@@ -1,6 +1,7 @@
 // Centralized export for routers
 module.exports = {
     authRoutes: require('./authRoutes'),
+    passwordResetRequestsRoutes: require('./passwordResetRequestsRoutes'),
     buildingsRoutes: require('./buildingsRoutes'),
     departmentsRoutes: require('./departmentsRoutes'),
     gradeLevelsRoutes: require('./gradeLevelsRoutes'),
@@ -9,6 +10,7 @@ module.exports = {
     rolesRoutes: require('./rolesRoutes'),
     roomsRoutes: require('./roomsRoutes'),
     scheduleApprovalsRoutes: require('./scheduleApprovalsRoutes'),
+    classProgramsRoutes: require('./classProgramsRoutes'),
     schedulesRoutes: require('./schedulesRoutes'),
     sectionsRoutes: require('./sectionsRoutes'),
     subjectsRoutes: require('./subjectsRoutes'),

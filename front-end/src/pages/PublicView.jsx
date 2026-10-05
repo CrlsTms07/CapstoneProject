@@ -83,7 +83,7 @@ export default function PublicView(){
     <div className="pv-root">
       <div className="pv-utility">
         <div>REPUBLIC OF THE PHILIPPINES</div>
-        <div className="pv-utility-links"><span>Official Website</span><span>DepEd CALABARZON</span></div>
+        <div className="pv-utility-links"><span>DepEd CALABARZON</span></div>
       </div>
 
       <header className="pv-header">
@@ -94,14 +94,14 @@ export default function PublicView(){
             <div className="pv-sub">City of Dasmarinas, Cavite</div>
           </div>
         </a>
-        <a href="/login" className="pv-staff-btn">Staff Login</a>
+        <a href="/login" className="pv-staff-btn">Login</a>
       </header>
 
       <main id="home" className="pv-main">
         <section className="pv-hero">
           <div className="pv-hero-copy">
             <span className="pv-eyebrow">EMMANUEL RESURRECCION CONGRESSIONAL INTEGRATED HIGH SCHOOL</span>
-            <h1>Official School Information Portal</h1>
+            <h1>OFFICIAL CLASS SCHEDULING</h1>
             <p>Access the class schedule and essential information of Emmanuel Resurreccion Congressional Integrated High School.</p>
             <a className="pv-hero-btn" href="#schedule">Class Schedule</a>
           </div>
@@ -217,7 +217,7 @@ export default function PublicView(){
             <p>301179@deped.gov.ph<br />(046) 894-1463 / (046) 472-9768</p>
           </div>
         </div>
-        <div className="pv-footer-bottom">© 2026 ERCIHS Web Development Team <span>Official school information portal</span></div>
+        <div className="pv-footer-bottom">© ERCIHS Class Scheduling System <span> Official Class Scheduling System</span></div>
       </footer>
     </div>
   )
