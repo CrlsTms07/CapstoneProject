@@ -1,7 +1,9 @@
+// HIPO 4.1 – Subjects
+// Subjects page: list, create, edit and delete subjects.
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StaffLayout from '../components/StaffLayout'
-import '../styles/adminDashboard.css'
+import StaffLayout from '../../components/StaffLayout'
+import '../../styles/adminDashboard.css'
 
 export default function Subjects({ user }) {
   const [subjects, setSubjects] = useState([])

@@ -13,7 +13,7 @@ module.exports = {
     classProgramsRoutes: require('./classProgramsRoutes'),
     schedulesRoutes: require('./schedulesRoutes'),
     sectionsRoutes: require('../modules/sections/sections.routes'),
-    subjectsRoutes: require('./subjectsRoutes'),
+    subjectsRoutes: require('../modules/subjects/subjects.routes'),
     teachersRoutes: require('../modules/teachers/teachers.routes'),
     teacherTasksRoutes: require('../modules/teachers/teacherTasks.routes'),
     timeSlotsRoutes: require('./timeSlotsRoutes'),

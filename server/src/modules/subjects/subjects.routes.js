@@ -1,3 +1,5 @@
+// HIPO 4.1 – Subjects
+// Routes: /api/subjects (CRUD). NOTE: no authentication middleware yet (audit P0).
 const express = require("express");
 
 const {
@@ -6,7 +8,7 @@ const {
     createSubject,
     updateSubject,
     deleteSubject
-} = require("../controllers/subjectsControllers");
+} = require("./subjects.controller");
 
 const router = express.Router();
 

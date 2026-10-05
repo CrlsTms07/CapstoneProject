@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 4.1 – Subjects
+// Subject CRUD (subject name + grade level).
+const pool = require("../../config/database");
 
 // GET all subjects
 const getSubjects = async (req, res) => {

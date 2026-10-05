@@ -10,7 +10,7 @@ module.exports = {
     scheduleApprovalsControllers: require('./scheduleApprovalsControllers'),
     schedulesControllers: require('./schedulesControllers'),
     sectionsControllers: require('../modules/sections/sections.controller'),
-    subjectsControllers: require('./subjectsControllers'),
+    subjectsControllers: require('../modules/subjects/subjects.controller'),
     teachersControllers: require('../modules/teachers/teachers.controller'),
     teacherTasksControllers: require('../modules/teachers/teacherTasks.controller'),
     timeSlotsControllers: require('./timeSlotsControllers'),
