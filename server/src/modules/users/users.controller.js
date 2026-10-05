@@ -1,6 +1,7 @@
 // HIPO 4.3 – Users & Roles
 // User account CRUD and approval of pending accounts.
 const pool = require("../../config/database");
+const { sendError } = require("../../utils/httpError");
 const { resolveUserGradeScope } = require("./users.service");
 
 // GET all users
@@ -146,11 +147,8 @@ const deleteUser = async (req, res) => {
             user: result.rows[0]
         });
     } catch (error) {
-        console.error("Error deleting user:", error);
-
-        res.status(500).json({
-            error: "Failed to delete user"
-        });
+        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
+        sendError(res, error, { action: "delete" });
     }
 };
 
