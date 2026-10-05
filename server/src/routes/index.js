@@ -10,12 +10,12 @@ module.exports = {
     rolesRoutes: require('../modules/users/roles.routes'),
     roomsRoutes: require('../modules/rooms/rooms.routes'),
     scheduleApprovalsRoutes: require('./scheduleApprovalsRoutes'),
-    classProgramsRoutes: require('./classProgramsRoutes'),
-    schedulesRoutes: require('./schedulesRoutes'),
+    classProgramsRoutes: require('../modules/schedules/classPrograms.routes'),
+    schedulesRoutes: require('../modules/schedules/schedules.routes'),
     sectionsRoutes: require('../modules/sections/sections.routes'),
     subjectsRoutes: require('../modules/subjects/subjects.routes'),
     teachersRoutes: require('../modules/teachers/teachers.routes'),
     teacherTasksRoutes: require('../modules/teachers/teacherTasks.routes'),
-    timeSlotsRoutes: require('./timeSlotsRoutes'),
+    timeSlotsRoutes: require('../modules/schedules/timeSlots.routes'),
     usersRoutes: require('../modules/users/users.routes')
 };

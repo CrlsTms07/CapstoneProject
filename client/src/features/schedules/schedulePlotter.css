@@ -1,3 +1,4 @@
+/* HIPO 3.2 – Schedule Plotter – styles for the plotter and its print layout */
 @tailwind utilities;
 .schedule-plotter{--plot-brand:#6b1d2f;--plot-brand-dark:#3f101a;--plot-line:#e7e6e8;--plot-ink:#29272b;--plot-muted:#777780;color:var(--plot-ink)}
 .plotter-interface{display:grid;gap:14px;padding-bottom:28px}

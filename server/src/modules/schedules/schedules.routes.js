@@ -1,3 +1,5 @@
+// HIPO 3.2 – Schedule Plotter (legacy schedules; also HIPO 8.0: teachers only see their own)
+// Routes: /api/schedules (read: signed-in users; create/update: admin, chair, master teacher; delete: admin).
 const express = require("express");
 
 const {
@@ -6,12 +8,12 @@ const {
     createSchedule,
     updateSchedule,
     deleteSchedule
-} = require("../controllers/schedulesControllers");
+} = require("./schedules.controller");
 
 const {
     authenticateUser,
     authorizeRoles
-} = require("../middleware/authMiddleware");
+} = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 

@@ -1,7 +1,9 @@
+// HIPO 3.2 – Schedule Plotter
+// JHS class program editor: live conflict + teacher-load validation, save/submit, CSV export and print (HIPO 7.0).
 import React, { useEffect, useMemo, useState } from 'react'
-import StaffLayout from '../components/StaffLayout'
-import { Icon } from '../components/DashboardPrimitives'
-import '../styles/schedulePlotter.css'
+import StaffLayout from '../../components/StaffLayout'
+import { Icon } from '../../components/DashboardPrimitives'
+import './schedulePlotter.css'
 
 const GRADES = ['7', '8', '9', '10']
 const MON_THU_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday']

@@ -1,3 +1,5 @@
+// HIPO 3.2 – Schedule Plotter (JHS class programs, Grades 7–10)
+// Routes: GET /api/class-programs/section/:sectionId, POST /validate (live conflict check), POST / (save draft / submit).
 const express = require('express')
 const {
   getProgramForSection,
@@ -5,8 +7,8 @@ const {
   saveClassProgram,
   getPendingClassPrograms,
   reviewClassProgram
-} = require('../controllers/classProgramsController')
-const { authenticateUser, authorizeRoles } = require('../middleware/authMiddleware')
+} = require('./classPrograms.controller')
+const { authenticateUser, authorizeRoles } = require('../../middleware/authMiddleware')
 
 const router = express.Router()
 router.use(authenticateUser)

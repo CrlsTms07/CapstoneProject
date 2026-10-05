@@ -1,4 +1,6 @@
-const pool = require("../config/database");
+// HIPO 3.2 – Schedule Plotter (time slots)
+// Time slot CRUD (start time + department) used by legacy schedules.
+const pool = require("../../config/database");
 
 // GET all time slots
 const getTimeSlots = async (req, res) => {

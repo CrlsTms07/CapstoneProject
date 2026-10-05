@@ -8,11 +8,11 @@ module.exports = {
     rolesControllers: require('../modules/users/roles.controller'),
     roomsControllers: require('../modules/rooms/rooms.controller'),
     scheduleApprovalsControllers: require('./scheduleApprovalsControllers'),
-    schedulesControllers: require('./schedulesControllers'),
+    schedulesControllers: require('../modules/schedules/schedules.controller'),
     sectionsControllers: require('../modules/sections/sections.controller'),
     subjectsControllers: require('../modules/subjects/subjects.controller'),
     teachersControllers: require('../modules/teachers/teachers.controller'),
     teacherTasksControllers: require('../modules/teachers/teacherTasks.controller'),
-    timeSlotsControllers: require('./timeSlotsControllers'),
+    timeSlotsControllers: require('../modules/schedules/timeSlots.controller'),
     usersControllers: require('../modules/users/users.controller')
 };

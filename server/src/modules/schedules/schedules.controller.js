@@ -1,4 +1,23 @@
-const pool = require("../config/database");
+// HIPO 3.2 – Schedule Plotter (legacy schedules)
+// Schedule CRUD with conflict checks (conflict.service.js). Chair / master teacher submissions start as pending.
+const pool = require("../../config/database");
+const { findLegacyScheduleConflict } = require("./conflict.service");
+
+// HTTP responses for each conflict type returned by findLegacyScheduleConflict.
+const LEGACY_CONFLICT_RESPONSES = {
+    teacher: {
+        error: "Teacher conflict",
+        message: "The teacher is already assigned to another schedule at this day and time."
+    },
+    room: {
+        error: "Room conflict",
+        message: "The room is already assigned to another schedule at this day and time."
+    },
+    section: {
+        error: "Section conflict",
+        message: "The section already has another schedule at this day and time."
+    }
+};
 
 // GET all schedules
 const getSchedules = async (req, res) => {
@@ -109,61 +128,13 @@ const createSchedule = async (req, res) => {
             effectiveStatus = 'pending';
         }
 
-        // Check for existing schedules on the same day and time slot
-        const conflictResult = await pool.query(
-            `
-            SELECT
-                s.schedule_id,
-                s.section_id,
-                s.teacher_id,
-                s.room_id,
-                s.time_slot_id,
-                s.day_of_week
-            FROM schedules s
-            WHERE s.day_of_week = $1
-              AND s.time_slot_id = $2
-            `,
-            [day_of_week, time_slot_id]
-        );
+        // Check for teacher / room / section conflicts on the same day and time slot (conflict.service.js)
+        const conflict = await findLegacyScheduleConflict({ section_id, teacher_id, room_id, time_slot_id, day_of_week });
 
-        const conflicts = conflictResult.rows;
-
-        // Teacher conflict
-        const teacherConflict = conflicts.find(
-            schedule => schedule.teacher_id === Number(teacher_id)
-        );
-
-        if (teacherConflict) {
+        if (conflict) {
             return res.status(409).json({
-                error: "Teacher conflict",
-                message: "The teacher is already assigned to another schedule at this day and time.",
-                conflicting_schedule_id: teacherConflict.schedule_id
-            });
-        }
-
-        // Room conflict
-        const roomConflict = conflicts.find(
-            schedule => schedule.room_id === Number(room_id)
-        );
-
-        if (roomConflict) {
-            return res.status(409).json({
-                error: "Room conflict",
-                message: "The room is already assigned to another schedule at this day and time.",
-                conflicting_schedule_id: roomConflict.schedule_id
-            });
-        }
-
-        // Section conflict
-        const sectionConflict = conflicts.find(
-            schedule => schedule.section_id === Number(section_id)
-        );
-
-        if (sectionConflict) {
-            return res.status(409).json({
-                error: "Section conflict",
-                message: "The section already has another schedule at this day and time.",
-                conflicting_schedule_id: sectionConflict.schedule_id
+                ...LEGACY_CONFLICT_RESPONSES[conflict.resource],
+                conflicting_schedule_id: conflict.schedule.schedule_id
             });
         }
 
@@ -262,62 +233,13 @@ const updateSchedule = async (req, res) => {
             status
         } = req.body;
 
-        // Check for conflicts, excluding the current schedule
-        const conflictResult = await pool.query(
-            `
-            SELECT
-                s.schedule_id,
-                s.section_id,
-                s.teacher_id,
-                s.room_id,
-                s.time_slot_id,
-                s.day_of_week
-            FROM schedules s
-            WHERE s.day_of_week = $1
-              AND s.time_slot_id = $2
-              AND s.schedule_id <> $3
-            `,
-            [day_of_week, time_slot_id, id]
-        );
+        // Check for conflicts, excluding the current schedule (conflict.service.js)
+        const conflict = await findLegacyScheduleConflict({ section_id, teacher_id, room_id, time_slot_id, day_of_week }, id);
 
-        const conflicts = conflictResult.rows;
-
-        // Teacher conflict
-        const teacherConflict = conflicts.find(
-            schedule => schedule.teacher_id === Number(teacher_id)
-        );
-
-        if (teacherConflict) {
+        if (conflict) {
             return res.status(409).json({
-                error: "Teacher conflict",
-                message: "The teacher is already assigned to another schedule at this day and time.",
-                conflicting_schedule_id: teacherConflict.schedule_id
-            });
-        }
-
-        // Room conflict
-        const roomConflict = conflicts.find(
-            schedule => schedule.room_id === Number(room_id)
-        );
-
-        if (roomConflict) {
-            return res.status(409).json({
-                error: "Room conflict",
-                message: "The room is already assigned to another schedule at this day and time.",
-                conflicting_schedule_id: roomConflict.schedule_id
-            });
-        }
-
-        // Section conflict
-        const sectionConflict = conflicts.find(
-            schedule => schedule.section_id === Number(section_id)
-        );
-
-        if (sectionConflict) {
-            return res.status(409).json({
-                error: "Section conflict",
-                message: "The section already has another schedule at this day and time.",
-                conflicting_schedule_id: sectionConflict.schedule_id
+                ...LEGACY_CONFLICT_RESPONSES[conflict.resource],
+                conflicting_schedule_id: conflict.schedule.schedule_id
             });
         }
 
