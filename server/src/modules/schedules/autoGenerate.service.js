@@ -142,9 +142,9 @@ const planSectionWeek = ({ termId, sectionId, context, qualified = new Map() }) 
 
 // API entry point. currentEntries (optional): the plotter's unsaved rows, which replace the
 // section's saved drafts while planning.
-const generateDraftForSection = async ({ termId, sectionId, user, currentEntries = null }) => {
+const generateDraftForSection = async ({ termId, sectionId, scope, currentEntries = null }) => {
   await assertTermExists(termId)
-  await assertSectionInScope(sectionId, user)
+  await assertSectionInScope(sectionId, scope)
   const ignoreEntryIds = currentEntries ? await getDraftIds(sectionId, termId) : []
   const context = await loadConflictContext({ termId, ignoreEntryIds })
   if (currentEntries) context.existingEntries.push(...currentEntries)

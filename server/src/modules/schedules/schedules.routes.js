@@ -9,7 +9,7 @@
 //   POST   /                       create one draft entry                   (admin, chair, master teacher)
 //   PUT    /:id                    edit a draft / rejected entry            (admin, chair, master teacher)
 //   DELETE /:id                    delete a draft / rejected entry          (admin, chair, master teacher)
-// Chairs and master teachers are limited to their grade level / department (schedules.service.js).
+// scopeToDepartment limits chairs to their grade level and master teachers to their department.
 const express = require('express')
 const {
   getSchedules,
@@ -22,12 +22,12 @@ const {
   updateSchedule,
   deleteSchedule
 } = require('./schedules.controller')
-const { authenticateUser, authorizeRoles } = require('../../middleware/authMiddleware')
+const { ROLES, authenticate, authorize, scopeToDepartment } = require('../../middleware/authMiddleware')
 
 const router = express.Router()
-const planners = authorizeRoles(1, 2, 3)
+const planners = authorize(ROLES.ADMIN, ROLES.CHAIR, ROLES.MASTER_TEACHER)
 
-router.use(authenticateUser)
+router.use(authenticate, scopeToDepartment)
 
 router.get('/', getSchedules)
 router.post('/check-conflicts', planners, checkScheduleConflicts)

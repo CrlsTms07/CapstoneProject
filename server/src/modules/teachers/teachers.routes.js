@@ -10,15 +10,12 @@ const {
     deleteTeacher
 } = require("./teachers.controller");
 
-const {
-    authenticateUser,
-    authorizeRoles
-} = require("../../middleware/authMiddleware");
+const { ROLES, authenticate, authorize } = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 
 // All teacher routes require authentication
-router.use(authenticateUser);
+router.use(authenticate);
 
 // View teachers - all authenticated roles
 router.get("/", getTeachers);
@@ -27,20 +24,20 @@ router.get("/:id", getTeacherById);
 // Create / Update teachers - Admin + Grade Level Chairperson
 router.post(
     "/",
-    authorizeRoles(1, 2, 3),
+    authorize(ROLES.ADMIN, ROLES.CHAIR, ROLES.MASTER_TEACHER),
     createTeacher
 );
 
 router.put(
     "/:id",
-    authorizeRoles(1, 2, 3),
+    authorize(ROLES.ADMIN, ROLES.CHAIR, ROLES.MASTER_TEACHER),
     updateTeacher
 );
 
 // Delete teacher - Admin only
 router.delete(
     "/:id",
-    authorizeRoles(1),
+    authorize(ROLES.ADMIN),
     deleteTeacher
 );
 

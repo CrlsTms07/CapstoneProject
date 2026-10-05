@@ -1,5 +1,5 @@
 // HIPO 3.4 – Manage Section
-// Routes: /api/sections (CRUD). NOTE: no authentication middleware yet (audit P0).
+// Routes: /api/sections – GET (signed-in users), POST / PUT / DELETE (admin, chair).
 const express = require("express");
 
 const {
@@ -9,13 +9,17 @@ const {
     updateSection,
     deleteSection
 } = require("./sections.controller");
+const { ROLES, authenticate, authorize } = require("../../middleware/authMiddleware");
 
 const router = express.Router();
+const canEdit = authorize(ROLES.ADMIN, ROLES.CHAIR);
+
+router.use(authenticate);
 
 router.get("/", getSections);
 router.get("/:id", getSectionById);
-router.post("/", createSection);
-router.put("/:id", updateSection);
-router.delete("/:id", deleteSection);
+router.post("/", canEdit, createSection);
+router.put("/:id", canEdit, updateSection);
+router.delete("/:id", canEdit, deleteSection);
 
 module.exports = router;

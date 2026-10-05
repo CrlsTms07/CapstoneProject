@@ -10,25 +10,22 @@ const {
     deleteApprovalRecord
 } = require("./approvals.controller");
 
-const {
-    authenticateUser,
-    authorizeRoles
-} = require("../../middleware/authMiddleware");
+const { ROLES, authenticate, authorize } = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 
 // All Schedule Approval routes require login
-router.use(authenticateUser);
+router.use(authenticate);
 
 // View approvals - all authenticated roles
 router.get("/", getApprovals);
 router.get("/:id", getApproval);
 
 // Create approvals (submit) - Admin, Grade Level Chairperson, Master Teacher
-router.post("/", authorizeRoles(1, 2, 3), createApprovalRecord);
+router.post("/", authorize(ROLES.ADMIN, ROLES.CHAIR, ROLES.MASTER_TEACHER), createApprovalRecord);
 
 // Update/Delete approvals (approve/reject) - Admin only
-router.put("/:id", authorizeRoles(1), updateApprovalRecord);
-router.delete("/:id", authorizeRoles(1), deleteApprovalRecord);
+router.put("/:id", authorize(ROLES.ADMIN), updateApprovalRecord);
+router.delete("/:id", authorize(ROLES.ADMIN), deleteApprovalRecord);
 
 module.exports = router;

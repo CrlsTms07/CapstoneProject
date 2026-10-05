@@ -2,12 +2,12 @@
 // Data access for schedule_entries: who may edit which section, the section timetable used by the
 // plotter, saving a week of draft rows, and single-entry create / update / delete.
 // Every write runs checkConflicts first (conflict.service.js) inside a transaction.
+// "actor" = { userId, scope } where scope comes from scopeToDepartment (src/middleware/authMiddleware.js).
 const pool = require('../../config/database')
 const { HttpError } = require('../../utils/httpError')
 const { withTimes } = require('./schedules.validation')
 const { checkConflicts, checkConflictsForEntries } = require('./conflict.service')
 
-const ROLE = { ADMIN: 1, CHAIR: 2, MASTER_TEACHER: 3, TEACHER: 4 }
 const EDITABLE_STATUSES = ['draft', 'rejected']
 
 // Entry columns plus readable names – shared by the plotter, teacher view, reports and guest view.
@@ -57,8 +57,8 @@ const assertTermExists = async (termId, db = pool) => {
 }
 
 // Admin: every section. Grade Level Chairperson: sections of the assigned grade level.
-// Master Teacher: sections of the same department. Others: none.
-const assertSectionInScope = async (sectionId, user, db = pool) => {
+// Master Teacher: sections of the same department.
+const assertSectionInScope = async (sectionId, scope, db = pool) => {
   const result = await db.query(`
     SELECT sec.section_id, sec.section_name, gl.grade_level_id, gl.grade_level_name, gl.department_id
     FROM sections sec JOIN grade_levels gl ON gl.grade_level_id = sec.grade_level_id
@@ -67,14 +67,13 @@ const assertSectionInScope = async (sectionId, user, db = pool) => {
   const section = result.rows[0]
   if (!section) throw new HttpError(404, 'Section not found.')
 
-  const role = Number(user.role_id)
-  if (role === ROLE.ADMIN) return section
-  const account = (await db.query('SELECT assigned_grade_level_id, department_id FROM users WHERE user_id = $1', [user.user_id])).rows[0] || {}
-  if (role === ROLE.CHAIR && Number(account.assigned_grade_level_id) === section.grade_level_id) return section
-  if (role === ROLE.MASTER_TEACHER && Number(account.department_id) === section.department_id) return section
-  throw new HttpError(403, role === ROLE.CHAIR
-    ? 'This section is outside the grade level assigned to your account.'
-    : 'This section is outside your department.')
+  if (scope.isAdmin) return section
+  if (scope.gradeLevelId) {
+    if (scope.gradeLevelId === section.grade_level_id) return section
+    throw new HttpError(403, 'This section is outside the grade level assigned to your account.')
+  }
+  if (scope.departmentId && scope.departmentId === section.department_id) return section
+  throw new HttpError(403, 'This section is outside your department.')
 }
 
 // draft if anything is still being edited, then pending, then approved; rejected only when nothing else is left.
@@ -84,11 +83,6 @@ const timetableStatus = statuses => ['draft', 'pending', 'approved', 'rejected']
 const getDraftIds = async (sectionId, termId, db = pool) => {
   const result = await db.query(`SELECT entry_id FROM schedule_entries WHERE section_id = $1 AND term_id = $2 AND status = 'draft'`, [sectionId, termId])
   return result.rows.map(row => row.entry_id)
-}
-
-const getTeacherIdForUser = async userId => {
-  const result = await pool.query('SELECT teacher_id FROM teachers WHERE user_id = $1', [userId])
-  return result.rows[0]?.teacher_id || null
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -173,10 +167,10 @@ const conflictError = (conflicts, teacherLoads) => new HttpError(409,
 
 // Saves the plotter's week for one section as drafts. Replaces the section's current drafts;
 // refused while the section has pending or approved rows. Rejected rows stay as history.
-const saveSectionDraft = ({ sectionId, termId, header, entries, user }) => inTransaction(async client => {
+const saveSectionDraft = ({ sectionId, termId, header, entries, actor }) => inTransaction(async client => {
   await lockTerm(client, termId)
   await assertTermExists(termId, client)
-  await assertSectionInScope(sectionId, user, client)
+  await assertSectionInScope(sectionId, actor.scope, client)
 
   const locked = await client.query(`
     SELECT status FROM schedule_entries
@@ -192,28 +186,28 @@ const saveSectionDraft = ({ sectionId, termId, header, entries, user }) => inTra
   const { conflicts, teacherLoads } = await checkConflictsForEntries(entries, { termId, db: client })
   if (conflicts.length) throw conflictError(conflicts, teacherLoads)
 
-  for (const entry of entries) await insertEntry(client, entry, user.user_id)
+  for (const entry of entries) await insertEntry(client, entry, actor.userId)
   await client.query(`
     INSERT INTO class_program_headers (term_id, section_id, header, updated_by, updated_at)
     VALUES ($1, $2, $3::JSONB, $4, NOW())
     ON CONFLICT (term_id, section_id) DO UPDATE SET header = EXCLUDED.header, updated_by = EXCLUDED.updated_by, updated_at = NOW()
-  `, [termId, sectionId, JSON.stringify(header || {}), user.user_id])
+  `, [termId, sectionId, JSON.stringify(header || {}), actor.userId])
 
   return { timetable: await getSectionTimetable(sectionId, termId, client), teacherLoads }
 })
 
-const createEntry = (entry, user) => inTransaction(async client => {
+const createEntry = (entry, actor) => inTransaction(async client => {
   await lockTerm(client, entry.term_id)
   await assertTermExists(entry.term_id, client)
-  await assertSectionInScope(entry.section_id, user, client)
+  await assertSectionInScope(entry.section_id, actor.scope, client)
   const conflicts = await checkConflicts(entry, { db: client })
   if (conflicts.length) throw conflictError(conflicts)
-  const entryId = await insertEntry(client, entry, user.user_id)
+  const entryId = await insertEntry(client, entry, actor.userId)
   return getEntry(entryId, client)
 })
 
 // Draft and rejected entries can be edited; the result is a draft again.
-const updateEntry = (entryId, entry, user) => inTransaction(async client => {
+const updateEntry = (entryId, entry, actor) => inTransaction(async client => {
   const current = (await client.query('SELECT * FROM schedule_entries WHERE entry_id = $1 FOR UPDATE', [entryId])).rows[0]
   if (!current) throw new HttpError(404, 'Schedule entry not found.')
   if (!EDITABLE_STATUSES.includes(current.status)) {
@@ -221,8 +215,8 @@ const updateEntry = (entryId, entry, user) => inTransaction(async client => {
   }
   await lockTerm(client, entry.term_id)
   await assertTermExists(entry.term_id, client)
-  await assertSectionInScope(current.section_id, user, client)
-  await assertSectionInScope(entry.section_id, user, client)
+  await assertSectionInScope(current.section_id, actor.scope, client)
+  await assertSectionInScope(entry.section_id, actor.scope, client)
 
   const conflicts = await checkConflicts({ ...entry, entry_id: entryId }, { db: client })
   if (conflicts.length) throw conflictError(conflicts)
@@ -238,10 +232,10 @@ const updateEntry = (entryId, entry, user) => inTransaction(async client => {
 
 // Pending and approved entries cannot be deleted. Entries with approval history are protected by
 // the approval_logs foreign key (ON DELETE RESTRICT) – the API turns that into a 409.
-const deleteEntry = (entryId, user) => inTransaction(async client => {
+const deleteEntry = (entryId, actor) => inTransaction(async client => {
   const current = (await client.query('SELECT entry_id, section_id, status FROM schedule_entries WHERE entry_id = $1 FOR UPDATE', [entryId])).rows[0]
   if (!current) throw new HttpError(404, 'Schedule entry not found.')
-  await assertSectionInScope(current.section_id, user, client)
+  await assertSectionInScope(current.section_id, actor.scope, client)
   if (!EDITABLE_STATUSES.includes(current.status)) {
     throw new HttpError(409, `This entry is ${current.status} and cannot be deleted.`, { code: 'DELETE_RESTRICTED' })
   }
@@ -250,7 +244,6 @@ const deleteEntry = (entryId, user) => inTransaction(async client => {
 })
 
 module.exports = {
-  ROLE,
   ENTRY_DETAILS_SQL,
   inTransaction,
   lockTerm,
@@ -258,7 +251,6 @@ module.exports = {
   assertSectionInScope,
   timetableStatus,
   getDraftIds,
-  getTeacherIdForUser,
   listEntries,
   getEntry,
   getSectionTimetable,

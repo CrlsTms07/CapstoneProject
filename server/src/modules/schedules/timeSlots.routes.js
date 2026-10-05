@@ -1,5 +1,5 @@
-// HIPO 3.2 – Schedule Plotter (time slots)
-// Routes: /api/time-slots (CRUD). NOTE: no authentication middleware yet (audit P0).
+// HIPO 3.2 – Schedule Plotter (time slots, legacy)
+// Routes: /api/time-slots – GET (signed-in users), POST / PUT / DELETE (admin).
 const express = require("express");
 
 const {
@@ -9,13 +9,17 @@ const {
     updateTimeSlot,
     deleteTimeSlot
 } = require("./timeSlots.controller");
+const { ROLES, authenticate, authorize } = require("../../middleware/authMiddleware");
 
 const router = express.Router();
+const canEdit = authorize(ROLES.ADMIN);
+
+router.use(authenticate);
 
 router.get("/", getTimeSlots);
 router.get("/:id", getTimeSlotById);
-router.post("/", createTimeSlot);
-router.put("/:id", updateTimeSlot);
-router.delete("/:id", deleteTimeSlot);
+router.post("/", canEdit, createTimeSlot);
+router.put("/:id", canEdit, updateTimeSlot);
+router.delete("/:id", canEdit, deleteTimeSlot);
 
 module.exports = router;

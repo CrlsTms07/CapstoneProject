@@ -10,32 +10,29 @@ const {
     deleteRole
 } = require("./roles.controller");
 
-const {
-    authenticateUser,
-    authorizeRoles
-} = require("../../middleware/authMiddleware");
+const { ROLES, authenticate, authorize } = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 
 // All role routes require authentication
-router.use(authenticateUser);
+router.use(authenticate);
 
 // View roles - all authenticated users
 router.get("/", getRoles);
 router.get("/:id", getRoleById);
 
 // Create / Update / Delete roles - Admin only
-router.post("/", authorizeRoles(1), createRole);
+router.post("/", authorize(ROLES.ADMIN), createRole);
 
 router.put(
     "/:id",
-    authorizeRoles(1),
+    authorize(ROLES.ADMIN),
     updateRole
 );
 
 router.delete(
     "/:id",
-    authorizeRoles(1),
+    authorize(ROLES.ADMIN),
     deleteRole
 );
 

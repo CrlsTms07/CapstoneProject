@@ -12,7 +12,7 @@ server/                      Express API (npm run dev → :5000)
   src/app.js                 Express app; mounts every module router, labeled with its HIPO number
   src/modules/<module>/      one folder per feature
   src/config/                database pool, mailer
-  src/middleware/            authenticateUser, authorizeRoles
+  src/middleware/            RBAC: authenticate, authorize(...ROLES), scopeToDepartment (req.scope)
   src/utils/httpError.js     HttpError + sendError/handle: PostgreSQL errors -> readable 4xx (409 on conflicts / blocked deletes)
   src/db/migrations/         schema changes run at startup (incl. DB-level conflict guards)
   src/db/seeds/              npm run db:init (tables, roles, admin account)
@@ -46,7 +46,10 @@ profile (9.0) · public (10.0)
   `jhs_class_program_*` and `schedules` tables are no longer written to; their rows were copied once.
 - New routers are mounted in `server/src/app.js` with a `// HIPO x.x` comment. Order matters:
   `/api/roles/public` before `/api/roles`.
-- Role IDs are hardcoded: 1 admin, 2 grade level chairperson, 3 master teacher, 4 teacher.
+- Role IDs are hardcoded: 1 admin, 2 grade level chairperson, 3 master teacher, 4 teacher. In code use
+  `ROLES.ADMIN`, `ROLES.CHAIR`, `ROLES.MASTER_TEACHER`, `ROLES.TEACHER` from `authMiddleware.js`.
+- Every router except `/api/public`, `/api/roles/public` and the login / recovery endpoints starts with
+  `router.use(authenticate)`; writes add `authorize(...)`. Planning routes add `scopeToDepartment`.
 
 ## Client rules
 

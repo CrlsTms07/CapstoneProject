@@ -13,49 +13,46 @@ const {
 } = require("./users.controller");
 const { getPendingUsers, approveUser } = require("./users.controller");
 
-const {
-    authenticateUser,
-    authorizeRoles
-} = require("../../middleware/authMiddleware");
+const { ROLES, authenticate, authorize } = require("../../middleware/authMiddleware");
 
 // All user-management routes require authentication
-router.use(authenticateUser);
+router.use(authenticate);
 
 // Admin only
 router.get(
     "/",
-    authorizeRoles(1),
+    authorize(ROLES.ADMIN),
     getUsers
 );
 
 // Pending users
-router.get('/pending', authorizeRoles(1), getPendingUsers);
+router.get('/pending', authorize(ROLES.ADMIN), getPendingUsers);
 
 router.get(
     "/:id",
-    authorizeRoles(1),
+    authorize(ROLES.ADMIN),
     getUserById
 );
 
 router.post(
     "/",
-    authorizeRoles(1),
+    authorize(ROLES.ADMIN),
     createUser
 );
 
 router.put(
     "/:id",
-    authorizeRoles(1),
+    authorize(ROLES.ADMIN),
     updateUser
 );
 
 router.delete(
     "/:id",
-    authorizeRoles(1),
+    authorize(ROLES.ADMIN),
     deleteUser
 );
 
 // Approve a pending user
-router.post('/:id/approve', authorizeRoles(1), approveUser);
+router.post('/:id/approve', authorize(ROLES.ADMIN), approveUser);
 
 module.exports = router;

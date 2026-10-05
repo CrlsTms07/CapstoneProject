@@ -93,7 +93,8 @@ const seedFixtures = async () => {
     admin: await user('admin', 1),
     chair7: await user('chair7', 2, { departmentId: jhs.department_id, gradeLevelId: grade7.grade_level_id }),
     chair11: await user('chair11', 2, { departmentId: shs.department_id, gradeLevelId: grade11.grade_level_id }),
-    masterJhs: await user('master', 3, { departmentId: jhs.department_id })
+    masterJhs: await user('master', 3, { departmentId: jhs.department_id }),
+    chairUnassigned: await user('chairnone', 2)
   }
 
   const teacher = async (key, fullName, extra = {}) => {

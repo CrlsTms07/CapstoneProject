@@ -1,30 +1,25 @@
 // HIPO 3.4 – Manage Section (school structure)
-// Routes: /api/departments (CRUD). NOTE: no authentication middleware yet (audit P0).
+// Routes: /api/departments – GET (signed-in users), POST / PUT / DELETE (admin).
 const express = require("express");
 
 const {
-  getDepartments,
-  getDepartmentById,
-  createDepartment,
-  updateDepartment,
-  deleteDepartment,
+    getDepartments,
+    getDepartmentById,
+    createDepartment,
+    updateDepartment,
+    deleteDepartment
 } = require("./departments.controller");
+const { ROLES, authenticate, authorize } = require("../../middleware/authMiddleware");
 
 const router = express.Router();
+const canEdit = authorize(ROLES.ADMIN);
 
-// GET all departments
+router.use(authenticate);
+
 router.get("/", getDepartments);
-
-// GET department by ID
 router.get("/:id", getDepartmentById);
-
-// CREATE department
-router.post("/", createDepartment);
-
-// UPDATE department
-router.put("/:id", updateDepartment);
-
-// DELETE department
-router.delete("/:id", deleteDepartment);
+router.post("/", canEdit, createDepartment);
+router.put("/:id", canEdit, updateDepartment);
+router.delete("/:id", canEdit, deleteDepartment);
 
 module.exports = router;
