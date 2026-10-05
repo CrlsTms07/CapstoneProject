@@ -1,6 +1,7 @@
 // HIPO 3.4 – Manage Section (school structure)
 // Department CRUD (e.g. JHS / SHS departments).
 const pool = require("../../config/database");
+const { sendError } = require("../../utils/httpError");
 
 // GET all departments
 const getDepartments = async (req, res) => {
@@ -107,8 +108,8 @@ const deleteDepartment = async (req, res) => {
       department: result.rows[0]
     });
   } catch (error) {
-    console.error("Error deleting department:", error);
-    res.status(500).json({ error: "Failed to delete department" });
+    // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
+    sendError(res, error, { action: "delete" });
   }
 };
 

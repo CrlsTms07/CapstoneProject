@@ -1,6 +1,7 @@
 // HIPO 3.4 – Manage Section (school structure)
 // Grade level CRUD (grade level name + department).
 const pool = require("../../config/database");
+const { sendError } = require("../../utils/httpError");
 
 // GET all grade levels
 const getGradeLevels = async (req, res) => {
@@ -167,12 +168,8 @@ const deleteGradeLevel = async (req, res) => {
             grade_level: result.rows[0]
         });
     } catch (error) {
-        console.error("Error deleting grade level:", error);
-
-        res.status(500).json({
-            error: "Failed to delete grade level",
-            details: error.message
-        });
+        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
+        sendError(res, error, { action: "delete" });
     }
 };
 

@@ -1,6 +1,7 @@
 // HIPO 3.4 – Manage Section
 // Section CRUD (section name + grade level).
 const pool = require("../../config/database");
+const { sendError } = require("../../utils/httpError");
 
 // GET all sections
 const getSections = async (req, res) => {
@@ -175,12 +176,8 @@ const deleteSection = async (req, res) => {
             section: result.rows[0]
         });
     } catch (error) {
-        console.error("Error deleting section:", error);
-
-        res.status(500).json({
-            error: "Failed to delete section",
-            details: error.message
-        });
+        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
+        sendError(res, error, { action: "delete" });
     }
 };
 
