@@ -1,6 +1,7 @@
 // HIPO 4.1 – Subjects
 // Subject CRUD (subject name + grade level).
 const pool = require("../../config/database");
+const { sendError } = require("../../utils/httpError");
 
 // GET all subjects
 const getSubjects = async (req, res) => {
@@ -175,12 +176,8 @@ const deleteSubject = async (req, res) => {
             subject: result.rows[0]
         });
     } catch (error) {
-        console.error("Error deleting subject:", error);
-
-        res.status(500).json({
-            error: "Failed to delete subject",
-            details: error.message
-        });
+        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
+        sendError(res, error, { action: "delete" });
     }
 };
 
