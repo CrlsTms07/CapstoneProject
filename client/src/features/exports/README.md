@@ -1,5 +1,9 @@
 # HIPO 7.0 – Export PDF/CSV (client)
 
-No standalone export components yet. The existing CSV export and print-to-PDF live in
-`../schedules/SchedulePlotter.jsx` (`exportCsv()` and the "Export / Print PDF" button).
-Shared export helpers (CSV builder, print layouts) belong in this folder.
+Exports of **approved** schedules are made on the server: every report on the Reports page
+(`../reports/Reports.jsx`) links to `GET /api/reports/:type?...&format=csv` or `&format=pdf`.
+The same report data feeds the on-screen preview, the CSV file and the PDF file
+(`server/src/modules/exports/csvExport.service.js`, `pdfExport.service.js`).
+
+The Schedule Plotter keeps its own CSV export and print-to-PDF (`../schedules/SchedulePlotter.jsx`)
+for the class program that is still being edited (drafts, not yet approved).

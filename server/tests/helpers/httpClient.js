@@ -21,6 +21,7 @@ const makeClient = (baseUrl, cookie = null) => {
     return { status: response.status, body: parsed }
   }
   return {
+    cookie, // for raw fetch() calls, e.g. downloading a PDF
     get: path => request('GET', path),
     post: (path, body) => request('POST', path, body ?? {}),
     put: (path, body) => request('PUT', path, body ?? {}),

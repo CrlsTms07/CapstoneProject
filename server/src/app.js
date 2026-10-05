@@ -67,6 +67,7 @@ app.use("/api/terms", require("./modules/schedules/terms.routes"));             
 app.use("/api/schedules", require("./modules/schedules/schedules.routes"));          // HIPO 3.2 / 8.0
 app.use("/api/public", require("./modules/public/public.routes"));                   // HIPO 10.0 Guest view (no login, read-only)
 app.use("/api/approvals", require("./modules/approvals/approvals.routes"));          // HIPO 5.0 Approvals
+app.use("/api/reports", require("./modules/reports/reports.routes"));              // HIPO 6.0 Reports / 7.0 Export
 app.use("/api/teacher-tasks", require("./modules/teachers/teacherTasks.routes"));    // HIPO 3.3 Manage Teacher
 app.use("/api/users", require("./modules/users/users.routes"));                      // HIPO 4.3 Users & Roles
 app.use("/api/password-reset-requests", require("./modules/auth/passwordReset.routes")); // HIPO 2.0 Login (recovery)
