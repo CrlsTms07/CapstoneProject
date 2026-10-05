@@ -1,7 +1,7 @@
 // HIPO 3.2 – Schedule Plotter (integration tests)
 // The real API + PostgreSQL (a separate *_test database): conflict checks, saving a section's week,
 // single-entry CRUD, delete restrictions, the database safety net and Auto-Generate.
-const { pool, resetTestDatabase, seedFixtures, insertEntry } = require('../helpers/testDatabase')
+const { pool, resetTestDatabase, seedFixtures, insertEntry, seedTemplates } = require('../helpers/testDatabase')
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
 const { startServer, makeClient, login } = require('../helpers/httpClient')
@@ -117,7 +117,7 @@ describe('PUT /api/schedules/section/:id (save the week as drafts)', () => {
       entries: [mathRow({ room_id: school.rooms.r102 }), mathRow({ start_time: '13:00', subject_id: school.subjects.english7, teacher_id: school.teachers.santos, room_id: school.rooms.r102, duration_minutes: 50 })]
     })
     assert.equal(response.status, 409)
-    assert.deepEqual(response.body.conflicts.map(conflict => conflict.type).sort(), ['teacher', 'time_rule'])
+    assert.deepEqual(response.body.conflicts.map(conflict => conflict.type).sort(), ['teacher'])
     const count = await pool.query('SELECT COUNT(*)::INT AS n FROM schedule_entries WHERE section_id = $1', [school.sections.mabini])
     assert.equal(count.rows[0].n, 0)
   })
@@ -252,21 +252,109 @@ describe('deletion restrictions (ON DELETE RESTRICT)', () => {
   })
 })
 
+// From here on Grade 7 follows the seeded time template (CLAUDE.md "Scheduling Rules").
+describe('time templates, co-teaching and delivery mode through the API', () => {
+  before(async () => {
+    await clearSchedules()
+    await seedTemplates()
+  })
+
+  // Monday–Thursday 06:30–07:15 is the first Grade 7 period.
+  const firstPeriod = (overrides = {}) => mathRow({ start_time: '06:30', duration_minutes: 45, ...overrides })
+
+  it('checks Grade 7 rows against the template: 07:30 is not a period, 06:30–07:15 is', async () => {
+    const check = entries => chair7.post('/api/schedules/check-conflicts', { term_id: school.termId, section_id: school.sections.rizal, entries })
+    const wrong = await check([mathRow()])
+    assert.deepEqual(wrong.body.conflicts.map(conflict => conflict.type), ['time_rule'])
+    assert.match(wrong.body.conflicts[0].message, /07:30–08:15 is not a Monday period of Grade 7/)
+    assert.deepEqual((await check([firstPeriod(), firstPeriod({ day_of_week: 'Friday', duration_minutes: 40 })])).body.conflicts, [])
+  })
+
+  it('saves a co-taught class and returns both teachers', async () => {
+    const response = await chair7.put(`/api/schedules/section/${school.sections.rizal}`, {
+      term_id: school.termId, entries: [firstPeriod({ teacher_id: undefined, teacher_ids: [school.teachers.cruz, school.teachers.santos] })]
+    })
+    assert.equal(response.status, 200, JSON.stringify(response.body))
+    const [entry] = response.body.entries
+    assert.deepEqual(entry.teacher_ids, [school.teachers.cruz, school.teachers.santos])
+    assert.deepEqual(entry.teacher_names, ['Ana Cruz', 'Ben Santos'])
+    assert.equal(entry.teacher_id, school.teachers.cruz)
+  })
+
+  it('reports the co-teacher as busy in another section', async () => {
+    const response = await chair7.post('/api/schedules/check-conflicts', {
+      term_id: school.termId, section_id: school.sections.mabini,
+      entries: [firstPeriod({ subject_id: school.subjects.english7, teacher_id: school.teachers.santos, room_id: school.rooms.r102 })]
+    })
+    assert.deepEqual(response.body.conflicts.map(conflict => conflict.type), ['teacher'])
+    assert.match(response.body.conflicts[0].message, /Ben Santos is already teaching Grade 7 - Rizal \(Math 7\)/)
+  })
+
+  it('blocks the co-teacher in the database too (exclusion constraint on entry_teachers)', async () => {
+    await assert.rejects(
+      insertEntry({ term_id: school.termId, section_id: school.sections.mabini, subject_id: school.subjects.english7, teacher_id: school.teachers.santos, room_id: school.rooms.r102, day_of_week: 'Monday', start_min: 390, end_min: 435 }),
+      error => error.code === '23P01' && error.constraint === 'schedule_entries_teacher_no_overlap'
+    )
+  })
+
+  it('updates the co-teacher of a single entry', async () => {
+    const [entry] = (await chair7.get(`/api/schedules/section/${school.sections.rizal}?term_id=${school.termId}`)).body.entries
+    const response = await chair7.put(`/api/schedules/${entry.entry_id}`, { term_id: school.termId, section_id: school.sections.rizal, ...firstPeriod({ teacher_id: undefined, teacher_ids: [school.teachers.cruz] }) })
+    assert.equal(response.status, 200, JSON.stringify(response.body))
+    assert.deepEqual(response.body.teacher_ids, [school.teachers.cruz])
+  })
+
+  it('accepts an asynchronous class without a room; a face-to-face class needs one', async () => {
+    const created = await chair7.post('/api/schedules', {
+      term_id: school.termId, section_id: school.sections.mabini,
+      ...firstPeriod({ day_of_week: 'Wednesday', subject_id: school.subjects.english7, teacher_id: school.teachers.santos, room_id: null, delivery_mode: 'asynchronous' })
+    })
+    assert.equal(created.status, 201, JSON.stringify(created.body))
+    assert.deepEqual([created.body.delivery_mode, created.body.room_id], ['asynchronous', null])
+
+    const noRoom = await chair7.post('/api/schedules', { term_id: school.termId, section_id: school.sections.mabini, ...firstPeriod({ day_of_week: 'Thursday', subject_id: school.subjects.english7, teacher_id: school.teachers.santos, room_id: null }) })
+    assert.equal(noRoom.status, 400)
+    assert.match(noRoom.body.error, /face-to-face class needs a room/)
+  })
+
+  it('does not book the room of an asynchronous class (API and database)', async () => {
+    const asyncRow = await chair7.post('/api/schedules', {
+      term_id: school.termId, section_id: school.sections.mabini,
+      ...firstPeriod({ day_of_week: 'Tuesday', subject_id: school.subjects.english7, teacher_id: school.teachers.santos, delivery_mode: 'asynchronous' })
+    })
+    assert.equal(asyncRow.status, 201, JSON.stringify(asyncRow.body))
+    assert.equal(asyncRow.body.room_id, school.rooms.r101)
+    const sameRoom = await chair7.post('/api/schedules', { term_id: school.termId, section_id: school.sections.rizal, ...firstPeriod({ day_of_week: 'Tuesday' }) })
+    assert.equal(sameRoom.status, 201, JSON.stringify(sameRoom.body))
+  })
+
+  it('shows a co-taught approved class to both teachers', async () => {
+    await clearSchedules()
+    await insertEntry({ term_id: school.termId, section_id: school.sections.rizal, subject_id: school.subjects.math7, teacher_id: school.teachers.cruz, coTeacherId: school.teachers.santos, room_id: school.rooms.r101, day_of_week: 'Monday', start_min: 390, end_min: 435, status: 'approved' })
+    const santos = await login(baseUrl, 'santos')
+    const response = await santos.get('/api/schedules')
+    assert.deepEqual(response.body.map(entry => entry.teacher_names), [['Ana Cruz', 'Ben Santos']])
+    assert.equal((await santos.get(`/api/schedules/${response.body[0].entry_id}`)).status, 200)
+  })
+})
+
 describe('POST /api/schedules/auto-generate', () => {
   before(clearSchedules)
 
-  it('proposes a conflict-free week that can be saved as it is', async () => {
-    // Santos already teaches Mabini on Monday morning; the generator must work around it.
-    await insertEntry({ term_id: school.termId, section_id: school.sections.mabini, subject_id: school.subjects.english7, teacher_id: school.teachers.santos, room_id: school.rooms.r102, day_of_week: 'Monday', start_min: 420, end_min: 465, status: 'approved' })
-    const breakRow = { day_of_week: 'Monday', start_time: '09:15', duration_minutes: 45, activity: 'BREAK' }
-    const proposal = await chair7.post('/api/schedules/auto-generate', { term_id: school.termId, section_id: school.sections.rizal, entries: [breakRow] })
+  it('proposes a conflict-free week from the time template that can be saved as it is', async () => {
+    // Santos already teaches Mabini in the first Monday period; the generator must work around it.
+    await insertEntry({ term_id: school.termId, section_id: school.sections.mabini, subject_id: school.subjects.english7, teacher_id: school.teachers.santos, room_id: school.rooms.r102, day_of_week: 'Monday', start_min: 390, end_min: 435, status: 'approved' })
+    const flagRow = { day_of_week: 'Monday', start_time: '07:15', duration_minutes: 45, activity: 'FLAG CEREMONY' }
+    const proposal = await chair7.post('/api/schedules/auto-generate', { term_id: school.termId, section_id: school.sections.rizal, entries: [flagRow] })
     assert.equal(proposal.status, 200, JSON.stringify(proposal.body))
     assert.deepEqual(proposal.body.unfilled, [])
-    assert.equal(proposal.body.generated.length, 12) // Math, English, Science × 4 periods
-    assert.ok(!proposal.body.generated.some(entry => entry.day_of_week === 'Monday' && entry.start_min === 555), 'the BREAK period stays free')
+    assert.equal(proposal.body.generated.length, 15) // Math, English, Science × (Mon–Thu + Fri)
+    const minutes = subjectId => proposal.body.generated.filter(entry => entry.subject_id === subjectId).reduce((total, entry) => total + entry.end_min - entry.start_min, 0)
+    assert.deepEqual([minutes(school.subjects.math7), minutes(school.subjects.english7), minutes(school.subjects.science7)], [400, 220, 220])
+    assert.ok(!proposal.body.generated.some(entry => entry.day_of_week === 'Monday' && entry.start_min === 435), 'the FLAG CEREMONY period stays free')
 
-    const saved = await chair7.put(`/api/schedules/section/${school.sections.rizal}`, { term_id: school.termId, entries: [breakRow, ...proposal.body.generated] })
+    const saved = await chair7.put(`/api/schedules/section/${school.sections.rizal}`, { term_id: school.termId, entries: [flagRow, ...proposal.body.generated] })
     assert.equal(saved.status, 200, JSON.stringify(saved.body))
-    assert.equal(saved.body.entries.length, 13)
+    assert.equal(saved.body.entries.length, 16)
   })
 })

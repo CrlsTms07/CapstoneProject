@@ -1,185 +1,41 @@
 // HIPO 3.4 – Manage Section
-// Section CRUD (section name + grade level).
-const pool = require("../../config/database");
-const { sendError } = require("../../utils/httpError");
+// Section CRUD (section name, grade level, class adviser, co-adviser, strand).
+const { HttpError, handle } = require("../../utils/httpError");
+const service = require("./sections.service");
+const { normalizeSection, requirePositiveId } = require("./sections.validation");
 
-// GET all sections
-const getSections = async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT
-                section_id,
-                section_name,
-                grade_level_id
-            FROM sections
-            ORDER BY section_id
-        `);
+const sectionIdOf = req => requirePositiveId(req.params.id, "Section id");
 
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error("Error fetching sections:", error);
+// GET /api/sections
+const getSections = handle(async (req, res) => {
+    res.status(200).json(await service.listSections());
+});
 
-        res.status(500).json({
-            error: "Failed to fetch sections",
-            details: error.message
-        });
-    }
-};
+// GET /api/sections/:id
+const getSectionById = handle(async (req, res) => {
+    const section = await service.getSection(sectionIdOf(req));
+    if (!section) throw new HttpError(404, "Section not found");
+    res.status(200).json(section);
+});
 
-// GET section by ID
-const getSectionById = async (req, res) => {
-    try {
-        const { id } = req.params;
+// POST /api/sections – { section_name, grade_level_id, adviser_id?, co_adviser_id?, strand? }
+const createSection = handle(async (req, res) => {
+    res.status(201).json(await service.createSection(normalizeSection(req.body)));
+});
 
-        const result = await pool.query(
-            `
-            SELECT
-                section_id,
-                section_name,
-                grade_level_id
-            FROM sections
-            WHERE section_id = $1
-            `,
-            [id]
-        );
+// PUT /api/sections/:id – adviser_id / co_adviser_id / strand left out of the body stay unchanged.
+const updateSection = handle(async (req, res) => {
+    const section = await service.updateSection(sectionIdOf(req), normalizeSection(req.body));
+    if (!section) throw new HttpError(404, "Section not found");
+    res.status(200).json(section);
+});
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Section not found"
-            });
-        }
-
-        res.status(200).json(result.rows[0]);
-    } catch (error) {
-        console.error("Error fetching section:", error);
-
-        res.status(500).json({
-            error: "Failed to fetch section",
-            details: error.message
-        });
-    }
-};
-
-// CREATE section
-const createSection = async (req, res) => {
-    try {
-        const { section_name, grade_level_id } = req.body;
-
-        if (
-            !section_name ||
-            grade_level_id === undefined ||
-            grade_level_id === null
-        ) {
-            return res.status(400).json({
-                error: "section_name and grade_level_id are required"
-            });
-        }
-
-        const result = await pool.query(
-            `
-            INSERT INTO sections
-                (section_name, grade_level_id)
-            VALUES
-                ($1, $2)
-            RETURNING
-                section_id,
-                section_name,
-                grade_level_id
-            `,
-            [section_name, grade_level_id]
-        );
-
-        res.status(201).json(result.rows[0]);
-    } catch (error) {
-        console.error("Error creating section:", error);
-
-        res.status(500).json({
-            error: "Failed to create section",
-            details: error.message
-        });
-    }
-};
-
-// UPDATE section
-const updateSection = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { section_name, grade_level_id } = req.body;
-
-        if (
-            !section_name ||
-            grade_level_id === undefined ||
-            grade_level_id === null
-        ) {
-            return res.status(400).json({
-                error: "section_name and grade_level_id are required"
-            });
-        }
-
-        const result = await pool.query(
-            `
-            UPDATE sections
-            SET
-                section_name = $1,
-                grade_level_id = $2
-            WHERE section_id = $3
-            RETURNING
-                section_id,
-                section_name,
-                grade_level_id
-            `,
-            [section_name, grade_level_id, id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Section not found"
-            });
-        }
-
-        res.status(200).json(result.rows[0]);
-    } catch (error) {
-        console.error("Error updating section:", error);
-
-        res.status(500).json({
-            error: "Failed to update section",
-            details: error.message
-        });
-    }
-};
-
-// DELETE section
-const deleteSection = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const result = await pool.query(
-            `
-            DELETE FROM sections
-            WHERE section_id = $1
-            RETURNING
-                section_id,
-                section_name,
-                grade_level_id
-            `,
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Section not found"
-            });
-        }
-
-        res.status(200).json({
-            message: "Section deleted successfully",
-            section: result.rows[0]
-        });
-    } catch (error) {
-        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
-        sendError(res, error, { action: "delete" });
-    }
-};
+// DELETE /api/sections/:id – 409 while schedule entries or approval history still use it (ON DELETE RESTRICT).
+const deleteSection = handle(async (req, res) => {
+    const section = await service.deleteSection(sectionIdOf(req));
+    if (!section) throw new HttpError(404, "Section not found");
+    res.status(200).json({ message: "Section deleted successfully", section });
+}, { action: "delete" });
 
 module.exports = {
     getSections,

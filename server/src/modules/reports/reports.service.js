@@ -7,12 +7,13 @@ const pool = require('../../config/database')
 const { HttpError } = require('../../utils/httpError')
 const { ROLES } = require('../../middleware/authMiddleware')
 const { listEntries } = require('../schedules/schedules.service')
-const { DEFAULT_TIME_RULES, DEFAULT_MAX_SUBJECT_LOAD } = require('../schedules/conflict.service')
+const { DEFAULT_MAX_SUBJECT_LOAD } = require('../schedules/conflict.service')
 
 const APPROVED = ['approved']
 
 const timeRange = entry => `${entry.start_time}–${entry.end_time}`
-const roomLabel = entry => entry.room_number ? `${entry.building_name} · ${entry.room_number}` : '—'
+const roomLabel = entry => entry.delivery_mode === 'asynchronous' ? 'Asynchronous' : entry.room_number ? `${entry.building_name} · ${entry.room_number}` : '—'
+const teachersLabel = entry => entry.teacher_names?.length ? entry.teacher_names.join(' / ') : entry.teacher_name || '—'
 
 const termLabel = async termId => {
   const term = (await pool.query('SELECT school_year, term_name FROM terms WHERE term_id = $1', [termId])).rows[0]
@@ -50,7 +51,7 @@ const sectionSchedule = async ({ termId, sectionId, scope }) => {
       { key: 'day', label: 'Day' }, { key: 'time', label: 'Time' }, { key: 'subject', label: 'Subject / Activity' },
       { key: 'teacher', label: 'Teacher' }, { key: 'room', label: 'Room' }
     ],
-    rows: entries.map(entry => ({ day: entry.day_of_week, time: timeRange(entry), subject: entry.subject_name || entry.activity, teacher: entry.teacher_name || '—', room: roomLabel(entry) }))
+    rows: entries.map(entry => ({ day: entry.day_of_week, time: timeRange(entry), subject: entry.subject_name || entry.activity, teacher: entry.subject_id ? teachersLabel(entry) : '—', room: roomLabel(entry) }))
   }
 }
 
@@ -94,7 +95,7 @@ const roomSchedule = async ({ termId, roomId, scope }) => {
       { key: 'day', label: 'Day' }, { key: 'time', label: 'Time' }, { key: 'section', label: 'Grade / Section' },
       { key: 'subject', label: 'Subject' }, { key: 'teacher', label: 'Teacher' }
     ],
-    rows: entries.map(entry => ({ day: entry.day_of_week, time: timeRange(entry), section: `${entry.grade_level_name} - ${entry.section_name}`, subject: entry.subject_name, teacher: entry.teacher_name }))
+    rows: entries.map(entry => ({ day: entry.day_of_week, time: timeRange(entry), section: `${entry.grade_level_name} - ${entry.section_name}`, subject: entry.subject_name, teacher: teachersLabel(entry) }))
   }
 }
 
@@ -109,7 +110,8 @@ const teacherLoad = async ({ termId, scope }) => {
            COALESCE(t.max_subject_load, $3)::INT AS max_subjects, t.weekly_load_minutes AS max_minutes
     FROM teachers t
     JOIN users u ON u.user_id = t.user_id
-    LEFT JOIN schedule_entries e ON e.teacher_id = t.teacher_id AND e.term_id = $1 AND e.status = 'approved'
+    LEFT JOIN entry_teachers et ON et.teacher_id = t.teacher_id AND et.term_id = $1 AND et.status = 'approved'
+    LEFT JOIN schedule_entries e ON e.entry_id = et.entry_id
     WHERE ($2::INT IS NULL OR u.department_id = $2)
     GROUP BY t.teacher_id, u.full_name, t.last_name, t.max_subject_load, t.weekly_load_minutes
     ORDER BY teacher
@@ -136,22 +138,31 @@ const teacherLoad = async ({ termId, scope }) => {
   }
 }
 
-// Used minutes compared with the school week of the room's department (department_time_rules,
-// or the Junior High default of Mon–Fri 07:00–17:00).
+// Face-to-face minutes used compared with the class minutes of a school week in the room's department:
+// the longest weekly class time among the department's time templates (MON_THU counts four days).
+// No template in the department: "Minutes available" and "Usage" show "—".
 const roomUtilization = async ({ termId, scope }) => {
   const result = await pool.query(`
+    WITH template_week AS (
+      SELECT tt.department_id, tt.template_id,
+             SUM((s.end_min - s.start_min) * CASE s.day_pattern WHEN 'MON_THU' THEN 4 ELSE 1 END)::INT AS minutes
+      FROM time_templates tt JOIN time_template_slots s ON s.template_id = tt.template_id
+      WHERE s.slot_type = 'class'
+      GROUP BY tt.department_id, tt.template_id
+    ), department_week AS (
+      SELECT department_id, MAX(minutes) AS minutes FROM template_week GROUP BY department_id
+    )
     SELECT b.building_name, r.room_number, COUNT(e.entry_id)::INT AS classes,
-           COALESCE(SUM(e.end_min - e.start_min), 0)::INT AS minutes,
-           rule.day_start_min, rule.day_end_min, COALESCE(array_length(rule.allowed_days, 1), 0) AS day_count
+           COALESCE(SUM(e.end_min - e.start_min), 0)::INT AS minutes, week.minutes AS available
     FROM rooms r
     JOIN buildings b ON b.building_id = r.building_id
-    LEFT JOIN department_time_rules rule ON rule.department_id = b.department_id
+    LEFT JOIN department_week week ON week.department_id = b.department_id
     LEFT JOIN schedule_entries e ON e.room_id = r.room_id AND e.term_id = $1 AND e.status = 'approved'
+      AND e.delivery_mode = 'face_to_face'
     WHERE ($2::INT IS NULL OR b.department_id = $2)
-    GROUP BY r.room_id, b.building_name, r.room_number, rule.day_start_min, rule.day_end_min, rule.allowed_days
+    GROUP BY r.room_id, b.building_name, r.room_number, week.minutes
     ORDER BY b.building_name, r.room_number
   `, [termId, scope.isAdmin ? null : scope.departmentId])
-  const fallback = DEFAULT_TIME_RULES.JHS
   return {
     type: 'room-utilization',
     title: 'Room Utilization',
@@ -160,17 +171,13 @@ const roomUtilization = async ({ termId, scope }) => {
       { key: 'room', label: 'Room' }, { key: 'classes', label: 'Classes / week' }, { key: 'minutes', label: 'Minutes used' },
       { key: 'available', label: 'Minutes available' }, { key: 'usage', label: 'Usage' }
     ],
-    rows: result.rows.map(row => {
-      const dayLength = row.day_start_min === null ? fallback.day_end_min - fallback.day_start_min : row.day_end_min - row.day_start_min
-      const available = dayLength * (row.day_start_min === null ? fallback.allowed_days.length : row.day_count)
-      return {
-        room: `${row.building_name} · ${row.room_number}`,
-        classes: row.classes,
-        minutes: row.minutes,
-        available,
-        usage: `${available ? Math.round((row.minutes / available) * 100) : 0}%`
-      }
-    })
+    rows: result.rows.map(row => ({
+      room: `${row.building_name} · ${row.room_number}`,
+      classes: row.classes,
+      minutes: row.minutes,
+      available: row.available ?? '—',
+      usage: row.available ? `${Math.round((row.minutes / row.available) * 100)}%` : '—'
+    }))
   }
 }
 

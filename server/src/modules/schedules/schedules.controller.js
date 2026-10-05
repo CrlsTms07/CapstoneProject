@@ -1,10 +1,10 @@
 // HIPO 3.2 – Schedule Plotter (also HIPO 8.0: a teacher sees only their own approved classes)
 // HTTP handlers for /api/schedules: list / read entries, live conflict check, the plotter's
-// section week (load and save), Auto-Generate Draft, and single-entry create / update / delete.
+// section week (load and save), Auto-Generate Draft, plotter hints (teacher availability, free rooms), and single-entry create / update / delete.
 const { HttpError, handle } = require('../../utils/httpError')
 const { ROLES } = require('../../middleware/authMiddleware')
-const { ENTRY_STATUSES, positiveIdOrNull, requireId, normalizeEntry, normalizeEntries } = require('./schedules.validation')
-const { checkConflictsForEntries } = require('./conflict.service')
+const { ENTRY_STATUSES, positiveIdOrNull, requireId, normalizeEntry, normalizeEntries, normalizeDayPattern, normalizeSlotQuery } = require('./schedules.validation')
+const { checkConflictsForEntries, getTeacherAvailability, getAvailableRooms } = require('./conflict.service')
 const { generateDraftForSection } = require('./autoGenerate.service')
 const {
   assertTermExists, assertSectionInScope, getDraftIds,
@@ -41,7 +41,7 @@ const getSchedules = handle(async (req, res) => {
 const getScheduleById = handle(async (req, res) => {
   const entry = await getEntry(requireId(req.params.id, 'Schedule entry id'))
   const hidden = isTeacher(req)
-    ? entry?.status !== 'approved' || entry?.teacher_id !== req.scope.teacherId
+    ? entry?.status !== 'approved' || !entry?.teacher_ids?.includes(req.scope.teacherId)
     : !req.scope.isAdmin && entry?.department_id !== req.scope.departmentId
   if (!entry || hidden) throw new HttpError(404, 'Schedule entry not found.')
   res.json(entry)
@@ -58,6 +58,29 @@ const checkScheduleConflicts = handle(async (req, res) => {
   const ignoreEntryIds = await getDraftIds(sectionId, termId)
   const { conflicts, teacherLoads } = await checkConflictsForEntries(entries, { termId, ignoreEntryIds })
   res.json({ conflicts, teacher_loads: teacherLoads })
+})
+
+// GET /api/schedules/teacher-availability?teacher_id=&term_id=&day_pattern=MON_THU&section_id=
+// The teacher's classes on those days; with section_id, the section's class slots marked available or not.
+const getTeacherAvailabilityHints = handle(async (req, res) => {
+  const teacherId = requireId(req.query.teacher_id, 'teacher_id')
+  const termId = requireId(req.query.term_id, 'term_id')
+  const dayPattern = normalizeDayPattern(req.query.day_pattern)
+  const sectionId = positiveIdOrNull(req.query.section_id)
+  await assertTermExists(termId)
+  if (sectionId) await assertSectionInScope(sectionId, req.scope)
+  const availability = await getTeacherAvailability(teacherId, termId, dayPattern, { sectionId })
+  if (!availability) throw new HttpError(404, 'Teacher not found.')
+  res.json(availability)
+})
+
+// GET /api/schedules/available-rooms?term_id=&day_pattern=|day_of_week=&start_time=&end_time=&section_id=&entry_id=
+// Rooms free for the whole slot, the section's department first.
+const getAvailableRoomHints = handle(async (req, res) => {
+  const slot = normalizeSlotQuery(req.query)
+  await assertTermExists(slot.term_id)
+  if (slot.section_id) await assertSectionInScope(slot.section_id, req.scope)
+  res.json(await getAvailableRooms(slot))
 })
 
 // GET /api/schedules/section/:sectionId?term_id=
@@ -110,6 +133,8 @@ module.exports = {
   getSchedules,
   getScheduleById,
   checkScheduleConflicts,
+  getTeacherAvailabilityHints,
+  getAvailableRoomHints,
   getSectionSchedule,
   saveSectionSchedule,
   autoGenerateSchedule,

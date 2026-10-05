@@ -30,8 +30,8 @@ describe('normalizeEntry', () => {
   it('accepts start_time + duration_minutes (what the plotter sends)', () => {
     const entry = normalizeEntry({ day_of_week: 'Monday', start_time: '07:30', duration_minutes: 45, subject_id: '3', teacher_id: 4, room_id: 6 }, ids)
     assert.deepEqual(entry, {
-      entry_id: null, term_id: 1, section_id: 5, subject_id: 3, teacher_id: 4, room_id: 6,
-      activity: null, day_of_week: 'Monday', start_min: 450, end_min: 495
+      entry_id: null, term_id: 1, section_id: 5, subject_id: 3, teacher_id: 4, teacher_ids: [4], room_id: 6,
+      activity: null, delivery_mode: 'face_to_face', day_of_week: 'Monday', start_min: 450, end_min: 495
     })
   })
 
@@ -46,12 +46,35 @@ describe('normalizeEntry', () => {
       [{ day_of_week: 'Sunday', start_time: '07:30', duration_minutes: 45, activity: 'X' }, /weekday/],
       [{ day_of_week: 'Monday', start_time: '7am', duration_minutes: 45, activity: 'X' }, /24-hour start time/],
       [{ day_of_week: 'Monday', start_min: 500, end_min: 450, activity: 'X' }, /end time must be after/],
-      [{ day_of_week: 'Monday', start_time: '07:30', duration_minutes: 45, subject_id: 3 }, /one subject, one teacher and one room/],
+      [{ day_of_week: 'Monday', start_time: '07:30', duration_minutes: 45, subject_id: 3 }, /one subject and one or two teachers/],
+      [{ day_of_week: 'Monday', start_time: '07:30', duration_minutes: 45, subject_id: 3, teacher_id: 4 }, /face-to-face class needs a room/],
       [{ day_of_week: 'Monday', start_time: '07:30', duration_minutes: 45, teacher_id: 3 }, /activity name and no teacher or room/],
       [{ day_of_week: 'Monday', start_time: '07:30', duration_minutes: 45, activity: 'X', room_id: 'abc' }, /not a valid id/]
     ]
     for (const [raw, message] of bad) {
       assert.throws(() => normalizeEntry(raw, ids), error => error.status === 400 && message.test(error.message))
+    }
+  })
+
+  it('accepts one or two teachers (primary first) and an asynchronous class without a room', () => {
+    const entry = normalizeEntry({ day_of_week: 'Monday', start_min: 750, end_min: 870, subject_id: 3, teacher_ids: ['4', 9], delivery_mode: 'asynchronous' }, ids)
+    assert.deepEqual([entry.teacher_id, entry.teacher_ids, entry.room_id, entry.delivery_mode], [4, [4, 9], null, 'asynchronous'])
+    assert.deepEqual(normalizeEntry({ day_of_week: 'Monday', start_min: 750, end_min: 870, subject_id: 3, teacher_id: 4, teacher_ids: [4, 9], room_id: 6 }, ids).teacher_ids, [4, 9])
+  })
+
+  it('rejects bad teacher lists and delivery modes', () => {
+    const row = { day_of_week: 'Monday', start_min: 750, end_min: 870, subject_id: 3, room_id: 6 }
+    const bad = [
+      [{ ...row, teacher_ids: [4, 9, 11] }, /at most 2 teachers/],
+      [{ ...row, teacher_ids: [4, 4] }, /same teacher is listed twice/],
+      [{ ...row, teacher_ids: '4,9' }, /teacher_ids must be a list/],
+      [{ ...row, teacher_ids: [] }, /one or two teachers/],
+      [{ ...row, teacher_id: 9, teacher_ids: [4, 9] }, /teacher_id must be the first of teacher_ids/],
+      [{ ...row, teacher_id: 4, delivery_mode: 'online' }, /delivery_mode must be one of: face_to_face, asynchronous/],
+      [{ day_of_week: 'Monday', start_min: 750, end_min: 870, activity: 'BREAK', delivery_mode: 'asynchronous' }, /Only a class can be asynchronous/]
+    ]
+    for (const [raw, message] of bad) {
+      assert.throws(() => normalizeEntry(raw, ids), error => error.status === 400 && message.test(error.message), message.source)
     }
   })
 

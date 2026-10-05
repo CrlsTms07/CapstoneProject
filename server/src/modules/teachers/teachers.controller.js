@@ -1,15 +1,17 @@
 // HIPO 3.3 – Manage Teacher
-// Teacher records: max subject load, weekly load minutes and ancillary tasks.
+// Teacher records: max subject load, weekly load minutes, ancillary tasks and qualified subjects.
 const pool = require("../../config/database");
-const { sendError } = require("../../utils/httpError");
-const { normalizeAncillaryTasks, validMaxSubjectLoad } = require("./teachers.validation");
+const { sendError, handle } = require("../../utils/httpError");
+const { normalizeAncillaryTasks, validMaxSubjectLoad, normalizeSubjectIds, requireTeacherId } = require("./teachers.validation");
+const { listQualifiedSubjects, replaceQualifiedSubjects } = require("./teachers.service");
 
 // GET all teachers
 const getTeachers = async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT t.teacher_id, t.user_id, u.full_name, t.last_name,
-                   t.max_subject_load, t.weekly_load_minutes, t.ancillary_tasks
+                   t.max_subject_load, t.weekly_load_minutes, t.ancillary_tasks,
+                   ARRAY(SELECT ts.subject_id FROM teacher_subjects ts WHERE ts.teacher_id = t.teacher_id ORDER BY ts.subject_id) AS subject_ids
             FROM teachers t
             JOIN users u ON u.user_id = t.user_id
             ORDER BY t.teacher_id
@@ -234,7 +236,20 @@ const deleteTeacher = async (req, res) => {
     }
 };
 
+// GET /api/teachers/:id/subjects – the subjects this teacher is qualified to teach.
+const getQualifiedSubjects = handle(async (req, res) => {
+    res.status(200).json(await listQualifiedSubjects(requireTeacherId(req.params.id)));
+});
+
+// PUT /api/teachers/:id/subjects – { subject_ids: [...] } replaces the list.
+const setQualifiedSubjects = handle(async (req, res) => {
+    const teacherId = requireTeacherId(req.params.id);
+    res.status(200).json(await replaceQualifiedSubjects(teacherId, normalizeSubjectIds(req.body)));
+});
+
 module.exports = {
+    getQualifiedSubjects,
+    setQualifiedSubjects,
     getTeachers,
     getTeacherById,
     createTeacher,

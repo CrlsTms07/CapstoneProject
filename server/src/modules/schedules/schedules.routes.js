@@ -4,6 +4,8 @@
 //   GET    /:id                    one entry
 //   POST   /check-conflicts        live conflict check for the plotter      (admin, chair, master teacher)
 //   POST   /auto-generate          propose rows for empty periods           (admin, chair, master teacher)
+//   GET    /teacher-availability   when a teacher is busy (green/red hints) (admin, chair, master teacher)
+//   GET    /available-rooms        free rooms for a time slot               (admin, chair, master teacher)
 //   GET    /section/:sectionId     a section's week for one term            (admin, chair, master teacher)
 //   PUT    /section/:sectionId     save a section's week as drafts          (admin, chair, master teacher)
 //   POST   /                       create one draft entry                   (admin, chair, master teacher)
@@ -15,6 +17,8 @@ const {
   getSchedules,
   getScheduleById,
   checkScheduleConflicts,
+  getTeacherAvailabilityHints,
+  getAvailableRoomHints,
   getSectionSchedule,
   saveSectionSchedule,
   autoGenerateSchedule,
@@ -32,6 +36,8 @@ router.use(authenticate, scopeToDepartment)
 router.get('/', getSchedules)
 router.post('/check-conflicts', planners, checkScheduleConflicts)
 router.post('/auto-generate', planners, autoGenerateSchedule)
+router.get('/teacher-availability', planners, getTeacherAvailabilityHints)
+router.get('/available-rooms', planners, getAvailableRoomHints)
 router.get('/section/:sectionId', planners, getSectionSchedule)
 router.put('/section/:sectionId', planners, saveSectionSchedule)
 router.get('/:id', getScheduleById)

@@ -25,7 +25,8 @@ export default function Sidebar({ user, query = '' }) {
     { to: '/rooms', label: 'Rooms & Buildings', icon: 'building' },
     { to: '/users', label: 'Users & Roles', icon: 'shield' },
     { to: '/schedule-approvals', label: 'Schedule Approvals', icon: 'check' },
-    { to: '/reports', label: 'Reports & Insights', icon: 'chart' }
+    { to: '/reports', label: 'Reports & Insights', icon: 'chart' },
+    { to: '/document-settings', label: 'Document Settings', icon: 'inbox' }
   ]
 
   const chairMenu = [

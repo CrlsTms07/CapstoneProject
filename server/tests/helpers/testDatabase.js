@@ -14,6 +14,7 @@ const bcrypt = require('bcrypt')
 const pool = require('../../src/config/database')
 const { createBaseTables } = require('../../src/db/seeds/baseSchema')
 const { runMigrations } = require('../../src/db/migrations')
+const { seedTimeTemplates } = require('../../src/db/migrations/timeTemplates.migration')
 
 const TEST_PASSWORD = 'Test-Password-1'
 
@@ -77,12 +78,14 @@ const seedFixtures = async () => {
     r203: await room('203', shsBuilding.building_id)
   }
 
-  const subject = async (name, gradeLevelId, weeklyPeriods = null) => (await one('INSERT INTO subjects (subject_name, grade_level_id, weekly_periods) VALUES ($1, $2, $3) RETURNING subject_id', [name, gradeLevelId, weeklyPeriods])).subject_id
+  // Weekly minutes follow the Grade 7 class program: an "Enhanced" subject takes an 80-minute period
+  // every day (4 × 80 + 80), a regular one a 45-minute Mon–Thu period plus 40 on Friday (4 × 45 + 40).
+  const subject = async (name, gradeLevelId, weeklyMinutes = null) => (await one('INSERT INTO subjects (subject_name, grade_level_id, weekly_minutes) VALUES ($1, $2, $3) RETURNING subject_id', [name, gradeLevelId, weeklyMinutes])).subject_id
   const subjects = {
-    math7: await subject('Math 7', grade7.grade_level_id, 4),
-    english7: await subject('English 7', grade7.grade_level_id, 4),
-    science7: await subject('Science 7', grade7.grade_level_id, 4),
-    genMath: await subject('General Mathematics', grade11.grade_level_id, 4)
+    math7: await subject('Math 7', grade7.grade_level_id, 400),
+    english7: await subject('English 7', grade7.grade_level_id, 220),
+    science7: await subject('Science 7', grade7.grade_level_id, 220),
+    genMath: await subject('General Mathematics', grade11.grade_level_id, 240)
   }
 
   const user = async (key, roleId, extra = {}) => (await one(`
@@ -125,10 +128,21 @@ const seedFixtures = async () => {
 }
 
 // Inserts an entry straight into the table (bypassing the API) – for setting up a situation.
-const insertEntry = async (entry) => one(`
-  INSERT INTO schedule_entries (term_id, section_id, subject_id, teacher_id, room_id, activity, day_of_week, start_min, end_min, status)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
-`, [entry.term_id, entry.section_id, entry.subject_id ?? null, entry.teacher_id ?? null, entry.room_id ?? null,
-  entry.activity ?? null, entry.day_of_week, entry.start_min, entry.end_min, entry.status || 'draft'])
+// The database trigger adds teacher_id to entry_teachers; coTeacherId adds a second teacher.
+const insertEntry = async (entry) => {
+  const row = await one(`
+    INSERT INTO schedule_entries (term_id, section_id, subject_id, teacher_id, room_id, activity, delivery_mode, day_of_week, start_min, end_min, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
+  `, [entry.term_id, entry.section_id, entry.subject_id ?? null, entry.teacher_id ?? null, entry.room_id ?? null,
+    entry.activity ?? null, entry.delivery_mode || 'face_to_face', entry.day_of_week, entry.start_min, entry.end_min, entry.status || 'draft'])
+  if (entry.coTeacherId) {
+    // The copied columns are placeholders; the trigger fills them from the entry.
+    await pool.query("INSERT INTO entry_teachers (entry_id, teacher_id, term_id, day_of_week, start_min, end_min, status) VALUES ($1, $2, 0, '', 0, 0, '')", [row.entry_id, entry.coTeacherId])
+  }
+  return row
+}
 
-module.exports = { pool, TEST_PASSWORD, resetTestDatabase, seedFixtures, insertEntry }
+// Seeds the CLAUDE.md time templates for every matching grade level that has none (e.g. the fixture's Grade 7).
+const seedTemplates = () => seedTimeTemplates(pool)
+
+module.exports = { pool, TEST_PASSWORD, resetTestDatabase, seedFixtures, insertEntry, seedTemplates }

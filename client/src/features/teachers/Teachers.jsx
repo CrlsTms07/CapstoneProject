@@ -1,18 +1,20 @@
 // HIPO 3.3 – Manage Teacher
-// Faculty directory: create/edit teachers, subject load and ancillary tasks.
+// Faculty directory: create/edit teachers, subject load, ancillary tasks and qualified subjects (used by Auto-Generate).
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import StaffLayout from '../../components/StaffLayout'
 import '../../styles/adminDashboard.css'
 
 const ANCILLARY_TASKS = ['ICT Coordinator', 'SSG Coordinator', 'Lab Manager']
+const EMPTY_FORM = { user_id: '', last_name: '', max_subject_load: '', weekly_load_minutes: '', ancillary_tasks: [], subject_ids: [] }
 
 export default function Teachers({ user }) {
   const [teachers, setTeachers] = useState([])
+  const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
-  const [formData, setFormData] = useState({ user_id: '', last_name: '', max_subject_load: '', weekly_load_minutes: '', ancillary_tasks: [] })
+  const [formData, setFormData] = useState(EMPTY_FORM)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
 
@@ -20,10 +22,17 @@ export default function Teachers({ user }) {
     let mounted = true
     const fetchTeachers = async () => {
       try {
-        const res = await fetch('/api/teachers', { credentials: 'include' })
+        const [res, subjectRes] = await Promise.all([
+          fetch('/api/teachers', { credentials: 'include' }),
+          fetch('/api/subjects', { credentials: 'include' })
+        ])
         if (res.ok) {
           const data = await res.json()
           if (mounted) setTeachers(Array.isArray(data) ? data : (data.rows || []))
+        }
+        if (subjectRes.ok) {
+          const data = await subjectRes.json()
+          if (mounted) setSubjects(Array.isArray(data) ? data : (data.rows || []))
         }
       } catch (e) { /* ignore */ }
       finally { if (mounted) setLoading(false) }
@@ -41,11 +50,19 @@ export default function Teachers({ user }) {
       const method = editingId ? 'PUT' : 'POST'
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) })
       if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d && d.error ? d.error : 'Operation failed') }
+      const data = await res.json()
+      // Qualified subjects are saved separately, once the teacher record exists.
+      const qualified = await fetch(`/api/teachers/${data.teacher_id}/subjects`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ subject_ids: formData.subject_ids.map(Number) }) })
+      const saved = { ...data, subject_ids: formData.subject_ids.map(Number) }
+      setTeachers(list => editingId ? list.map(t => t.teacher_id === editingId ? { ...t, ...saved } : t) : [...list, saved])
+      if (!qualified.ok) {
+        const d = await qualified.json().catch(() => null)
+        setEditingId(data.teacher_id)
+        throw new Error(`Teacher saved, but the qualified subjects were not: ${d && d.error ? d.error : 'request failed'}`)
+      }
       setShowForm(false)
       setEditingId(null)
-      setFormData({ user_id: '', last_name: '', max_subject_load: '', weekly_load_minutes: '', ancillary_tasks: [] })
-      const data = await res.json()
-      setTeachers(list => editingId ? list.map(t => t.teacher_id === editingId ? data : t) : [...list, data])
+      setFormData(EMPTY_FORM)
     } catch (err) { setError(err.message) }
   }
 
@@ -60,7 +77,7 @@ export default function Teachers({ user }) {
 
   const openEdit = (t) => {
     setEditingId(t.teacher_id)
-    setFormData({ user_id: String(t.user_id), last_name: t.last_name, max_subject_load: String(t.max_subject_load ?? ''), weekly_load_minutes: String(t.weekly_load_minutes ?? ''), ancillary_tasks: t.ancillary_tasks || [] })
+    setFormData({ user_id: String(t.user_id), last_name: t.last_name, max_subject_load: String(t.max_subject_load ?? ''), weekly_load_minutes: String(t.weekly_load_minutes ?? ''), ancillary_tasks: t.ancillary_tasks || [], subject_ids: (t.subject_ids || []).map(String) })
     setShowForm(true)
   }
 
@@ -69,7 +86,7 @@ export default function Teachers({ user }) {
       <div style={{ padding: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h1>Teachers</h1>
-          <button className="action-btn primary" onClick={() => { setEditingId(null); setFormData({ user_id: '', last_name: '', max_subject_load: '', weekly_load_minutes: '', ancillary_tasks: [] }); setShowForm(true) }}>+ Add Teacher</button>
+          <button className="action-btn primary" onClick={() => { setEditingId(null); setFormData(EMPTY_FORM); setShowForm(true) }}>+ Add Teacher</button>
         </div>
         {showForm && (
           <form onSubmit={handleSubmit} style={{ background: 'var(--card-bg)', padding: 16, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -82,6 +99,14 @@ export default function Teachers({ user }) {
             <fieldset style={{ display: 'flex', flexWrap: 'wrap', gap: 14, border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
               <legend>Ancillary responsibilities</legend>
               {ANCILLARY_TASKS.map(task => <label key={task} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={formData.ancillary_tasks.includes(task)} onChange={event => setFormData(current => ({ ...current, ancillary_tasks: event.target.checked ? [...current.ancillary_tasks, task] : current.ancillary_tasks.filter(item => item !== task) }))} />{task}</label>)}
+            </fieldset>
+            <fieldset style={{ display: 'flex', flexWrap: 'wrap', gap: 14, border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+              <legend>Qualified subjects (Auto-Generate only assigns these)</legend>
+              {subjects.length === 0 && <span>No subjects yet.</span>}
+              {subjects.map(subject => {
+                const id = String(subject.subject_id)
+                return <label key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={formData.subject_ids.includes(id)} onChange={event => setFormData(current => ({ ...current, subject_ids: event.target.checked ? [...current.subject_ids, id] : current.subject_ids.filter(item => item !== id) }))} />{subject.subject_name} <small>(grade level {subject.grade_level_id})</small></label>
+              })}
             </fieldset>
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="submit" className="action-btn primary">{editingId ? 'Update' : 'Add'}</button>
@@ -99,6 +124,7 @@ export default function Teachers({ user }) {
                 <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Max Load</th>
                 <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Weekly Min</th>
                 <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Ancillary Tasks</th>
+                <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Qualified Subjects</th>
                 <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Actions</th>
               </tr>
             </thead>
@@ -111,6 +137,7 @@ export default function Teachers({ user }) {
                   <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{t.max_subject_load ?? '—'}</td>
                   <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{t.weekly_load_minutes ?? '—'}</td>
                   <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{(t.ancillary_tasks || []).join(', ') || '—'}</td>
+                  <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>{(t.subject_ids || []).map(id => subjects.find(subject => subject.subject_id === id)?.subject_name || `#${id}`).join(', ') || '—'}</td>
                   <td style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}>
                     <button className="action-btn" onClick={() => openEdit(t)} style={{ marginRight: 6 }}>Edit</button>
                     <button className="action-btn" onClick={() => handleDelete(t.teacher_id)} style={{ color: '#a91d2b', borderColor: 'rgba(169,29,43,0.2)' }}>Delete</button>

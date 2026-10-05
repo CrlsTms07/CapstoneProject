@@ -19,6 +19,7 @@ import Users from './features/users/Users'
 import Reports from './features/reports/Reports'
 import ScheduleApprovals from './features/approvals/ScheduleApprovals'
 import SubmittedSchedules from './features/approvals/SubmittedSchedules'
+import DocumentSettings from './features/exports/DocumentSettings'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -93,6 +94,7 @@ function App() {
       <Route path="/reports" element={<Reports user={user} />} />
       <Route path="/schedule-approvals" element={<ScheduleApprovals user={user} />} />
       <Route path="/submitted-schedules" element={<SubmittedSchedules user={user} />} />
+      <Route path="/document-settings" element={<DocumentSettings user={user} />} />
     </Routes>
   )
 }

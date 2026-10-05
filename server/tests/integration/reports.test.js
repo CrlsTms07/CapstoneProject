@@ -1,6 +1,6 @@
 // HIPO 6.0 / 7.0 – Reports and exports (integration tests)
 // Each report has one data query; JSON, CSV and PDF must show the same approved data.
-const { pool, resetTestDatabase, seedFixtures, insertEntry } = require('../helpers/testDatabase')
+const { pool, resetTestDatabase, seedFixtures, insertEntry, seedTemplates } = require('../helpers/testDatabase')
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
 const { startServer, login } = require('../helpers/httpClient')
@@ -10,6 +10,7 @@ let server, baseUrl, school, admin, master, chair11, teacherCruz, teacherSantos
 before(async () => {
   await resetTestDatabase()
   school = await seedFixtures()
+  await seedTemplates() // Grade 7 template; the SHS department has none
   ;({ server, baseUrl } = await startServer())
   admin = await login(baseUrl, 'admin')
   master = await login(baseUrl, 'master')
@@ -62,7 +63,10 @@ describe('GET /api/reports/:type', () => {
     assert.deepEqual([cruz.subjects, cruz.classes, cruz.minutes, cruz.status], [2, 2, 90, 'OK'])
     const rooms = await admin.get(`/api/reports/room-utilization?term_id=${school.termId}`)
     const room101 = rooms.body.rows.find(row => row.room === 'JHS Building · 101')
-    assert.deepEqual([room101.classes, room101.minutes, room101.available, room101.usage], [2, 90, 3000, '3%'])
+    // Grade 7 template: Mon–Thu 555 class minutes × 4 + Friday 560 = 2780 minutes a week.
+    assert.deepEqual([room101.classes, room101.minutes, room101.available, room101.usage], [2, 90, 2780, '3%'])
+    const room201 = rooms.body.rows.find(row => row.room === 'SHS Building · 201')
+    assert.deepEqual([room201.available, room201.usage], ['—', '—'], 'no time template in the SHS department')
   })
 
   it('keeps staff inside their department', async () => {

@@ -27,6 +27,9 @@ const OVERLAP_MESSAGES = {
 // Friendly names for tables that appear in "still used by" messages.
 const TABLE_LABELS = {
   schedule_entries: 'schedule entries',
+  entry_teachers: 'schedule entries',
+  time_templates: 'time templates',
+  document_settings: 'document settings',
   approval_logs: 'approval history',
   class_program_headers: 'class programs',
   schedules: 'schedules',

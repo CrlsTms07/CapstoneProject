@@ -1,5 +1,5 @@
 // HIPO 3.2 – Schedule Plotter
-// Data access for schedule_entries: who may edit which section, the section timetable used by the
+// Data access for schedule_entries (+ entry_teachers for co-teaching): who may edit which section, the section timetable used by the
 // plotter, saving a week of draft rows, and single-entry create / update / delete.
 // Every write runs checkConflicts first (conflict.service.js) inside a transaction.
 // "actor" = { userId, scope } where scope comes from scopeToDepartment (src/middleware/authMiddleware.js).
@@ -11,9 +11,16 @@ const { checkConflicts, checkConflictsForEntries } = require('./conflict.service
 const EDITABLE_STATUSES = ['draft', 'rejected']
 
 // Entry columns plus readable names – shared by the plotter, teacher view, reports and guest view.
+// teacher_id / teacher_name are the primary teacher; teacher_ids / teacher_names list every teacher
+// (co-teaching), primary first.
 const ENTRY_DETAILS_SQL = `
-  SELECT e.entry_id, e.term_id, e.section_id, e.subject_id, e.teacher_id, e.room_id, e.activity,
+  SELECT e.entry_id, e.term_id, e.section_id, e.subject_id, e.teacher_id, e.room_id, e.activity, e.delivery_mode,
          e.day_of_week, e.start_min, e.end_min, e.status, e.created_by, e.created_at, e.updated_at,
+         ARRAY(SELECT et.teacher_id FROM entry_teachers et WHERE et.entry_id = e.entry_id
+               ORDER BY et.teacher_id = e.teacher_id DESC, et.teacher_id) AS teacher_ids,
+         ARRAY(SELECT COALESCE(cu.full_name, ct.last_name) FROM entry_teachers et
+               JOIN teachers ct ON ct.teacher_id = et.teacher_id LEFT JOIN users cu ON cu.user_id = ct.user_id
+               WHERE et.entry_id = e.entry_id ORDER BY et.teacher_id = e.teacher_id DESC, et.teacher_id) AS teacher_names,
          t.school_year, t.term_name,
          sec.section_name, gl.grade_level_id, gl.grade_level_name, gl.department_id, d.department_name,
          sub.subject_name, COALESCE(u.full_name, tea.last_name) AS teacher_name,
@@ -95,7 +102,7 @@ const listEntries = async (filters = {}, db = pool) => {
     ${ENTRY_DETAILS_SQL}
     WHERE ($1::INT IS NULL OR e.term_id = $1)
       AND ($2::INT IS NULL OR e.section_id = $2)
-      AND ($3::INT IS NULL OR e.teacher_id = $3)
+      AND ($3::INT IS NULL OR EXISTS (SELECT 1 FROM entry_teachers et WHERE et.entry_id = e.entry_id AND et.teacher_id = $3))
       AND ($4::INT IS NULL OR e.room_id = $4)
       AND ($5::INT IS NULL OR gl.department_id = $5)
       AND ($6::TEXT[] IS NULL OR e.status = ANY($6::TEXT[]))
@@ -150,15 +157,32 @@ const getSectionTimetable = async (sectionId, termId, db = pool) => {
 // Writing
 // ---------------------------------------------------------------------------------------------
 
+// The database trigger adds the primary teacher (teacher_id) to entry_teachers; this sets the
+// rest of teacher_ids (the co-teacher) and removes teachers that are no longer listed.
+const setEntryTeachers = async (client, entryId, teacherIds = []) => {
+  await client.query('DELETE FROM entry_teachers WHERE entry_id = $1 AND NOT (teacher_id = ANY($2::INT[]))', [entryId, teacherIds])
+  for (const teacherId of teacherIds) {
+    await client.query(`
+      INSERT INTO entry_teachers (entry_id, teacher_id, term_id, day_of_week, start_min, end_min, status)
+      SELECT entry_id, $2, term_id, day_of_week, start_min, end_min, status FROM schedule_entries WHERE entry_id = $1
+      ON CONFLICT (entry_id, teacher_id) DO NOTHING
+    `, [entryId, teacherId])
+  }
+}
+
+const teacherIdsOfEntry = entry => entry.teacher_ids?.length ? entry.teacher_ids : entry.teacher_id ? [entry.teacher_id] : []
+
 const insertEntry = async (client, entry, userId) => {
   const result = await client.query(`
     INSERT INTO schedule_entries
-      (term_id, section_id, subject_id, teacher_id, room_id, activity, day_of_week, start_min, end_min, status, created_by)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10)
+      (term_id, section_id, subject_id, teacher_id, room_id, activity, delivery_mode, day_of_week, start_min, end_min, status, created_by)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'draft', $11)
     RETURNING entry_id
   `, [entry.term_id, entry.section_id, entry.subject_id, entry.teacher_id, entry.room_id, entry.activity,
-    entry.day_of_week, entry.start_min, entry.end_min, userId])
-  return result.rows[0].entry_id
+    entry.delivery_mode || 'face_to_face', entry.day_of_week, entry.start_min, entry.end_min, userId])
+  const entryId = result.rows[0].entry_id
+  await setEntryTeachers(client, entryId, teacherIdsOfEntry(entry))
+  return entryId
 }
 
 const conflictError = (conflicts, teacherLoads) => new HttpError(409,
@@ -223,10 +247,11 @@ const updateEntry = (entryId, entry, actor) => inTransaction(async client => {
   await client.query(`
     UPDATE schedule_entries
     SET term_id = $1, section_id = $2, subject_id = $3, teacher_id = $4, room_id = $5, activity = $6,
-        day_of_week = $7, start_min = $8, end_min = $9, status = 'draft', updated_at = NOW()
-    WHERE entry_id = $10
+        delivery_mode = $7, day_of_week = $8, start_min = $9, end_min = $10, status = 'draft', updated_at = NOW()
+    WHERE entry_id = $11
   `, [entry.term_id, entry.section_id, entry.subject_id, entry.teacher_id, entry.room_id, entry.activity,
-    entry.day_of_week, entry.start_min, entry.end_min, entryId])
+    entry.delivery_mode || 'face_to_face', entry.day_of_week, entry.start_min, entry.end_min, entryId])
+  await setEntryTeachers(client, entryId, teacherIdsOfEntry(entry))
   return getEntry(entryId, client)
 })
 

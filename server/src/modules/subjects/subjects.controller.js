@@ -1,185 +1,41 @@
 // HIPO 4.1 – Subjects
-// Subject CRUD (subject name + grade level).
-const pool = require("../../config/database");
-const { sendError } = require("../../utils/httpError");
+// Subject CRUD (subject name, grade level, display color, weekly minutes).
+const { HttpError, handle } = require("../../utils/httpError");
+const service = require("./subjects.service");
+const { normalizeSubject, requirePositiveId } = require("./subjects.validation");
 
-// GET all subjects
-const getSubjects = async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT
-                subject_id,
-                subject_name,
-                grade_level_id
-            FROM subjects
-            ORDER BY subject_id
-        `);
+const subjectIdOf = req => requirePositiveId(req.params.id, "Subject id");
 
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error("Error fetching subjects:", error);
+// GET /api/subjects
+const getSubjects = handle(async (req, res) => {
+    res.status(200).json(await service.listSubjects());
+});
 
-        res.status(500).json({
-            error: "Failed to fetch subjects",
-            details: error.message
-        });
-    }
-};
+// GET /api/subjects/:id
+const getSubjectById = handle(async (req, res) => {
+    const subject = await service.getSubject(subjectIdOf(req));
+    if (!subject) throw new HttpError(404, "Subject not found");
+    res.status(200).json(subject);
+});
 
-// GET subject by ID
-const getSubjectById = async (req, res) => {
-    try {
-        const { id } = req.params;
+// POST /api/subjects – { subject_name, grade_level_id, color?, weekly_minutes? }
+const createSubject = handle(async (req, res) => {
+    res.status(201).json(await service.createSubject(normalizeSubject(req.body)));
+});
 
-        const result = await pool.query(
-            `
-            SELECT
-                subject_id,
-                subject_name,
-                grade_level_id
-            FROM subjects
-            WHERE subject_id = $1
-            `,
-            [id]
-        );
+// PUT /api/subjects/:id – color / weekly_minutes left out of the body stay unchanged.
+const updateSubject = handle(async (req, res) => {
+    const subject = await service.updateSubject(subjectIdOf(req), normalizeSubject(req.body));
+    if (!subject) throw new HttpError(404, "Subject not found");
+    res.status(200).json(subject);
+});
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Subject not found"
-            });
-        }
-
-        res.status(200).json(result.rows[0]);
-    } catch (error) {
-        console.error("Error fetching subject:", error);
-
-        res.status(500).json({
-            error: "Failed to fetch subject",
-            details: error.message
-        });
-    }
-};
-
-// CREATE subject
-const createSubject = async (req, res) => {
-    try {
-        const { subject_name, grade_level_id } = req.body;
-
-        if (
-            !subject_name ||
-            grade_level_id === undefined ||
-            grade_level_id === null
-        ) {
-            return res.status(400).json({
-                error: "subject_name and grade_level_id are required"
-            });
-        }
-
-        const result = await pool.query(
-            `
-            INSERT INTO subjects
-                (subject_name, grade_level_id)
-            VALUES
-                ($1, $2)
-            RETURNING
-                subject_id,
-                subject_name,
-                grade_level_id
-            `,
-            [subject_name, grade_level_id]
-        );
-
-        res.status(201).json(result.rows[0]);
-    } catch (error) {
-        console.error("Error creating subject:", error);
-
-        res.status(500).json({
-            error: "Failed to create subject",
-            details: error.message
-        });
-    }
-};
-
-// UPDATE subject
-const updateSubject = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { subject_name, grade_level_id } = req.body;
-
-        if (
-            !subject_name ||
-            grade_level_id === undefined ||
-            grade_level_id === null
-        ) {
-            return res.status(400).json({
-                error: "subject_name and grade_level_id are required"
-            });
-        }
-
-        const result = await pool.query(
-            `
-            UPDATE subjects
-            SET
-                subject_name = $1,
-                grade_level_id = $2
-            WHERE subject_id = $3
-            RETURNING
-                subject_id,
-                subject_name,
-                grade_level_id
-            `,
-            [subject_name, grade_level_id, id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Subject not found"
-            });
-        }
-
-        res.status(200).json(result.rows[0]);
-    } catch (error) {
-        console.error("Error updating subject:", error);
-
-        res.status(500).json({
-            error: "Failed to update subject",
-            details: error.message
-        });
-    }
-};
-
-// DELETE subject
-const deleteSubject = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const result = await pool.query(
-            `
-            DELETE FROM subjects
-            WHERE subject_id = $1
-            RETURNING
-                subject_id,
-                subject_name,
-                grade_level_id
-            `,
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Subject not found"
-            });
-        }
-
-        res.status(200).json({
-            message: "Subject deleted successfully",
-            subject: result.rows[0]
-        });
-    } catch (error) {
-        // Still used by schedule entries or approval history (ON DELETE RESTRICT) -> 409 with a readable message.
-        sendError(res, error, { action: "delete" });
-    }
-};
+// DELETE /api/subjects/:id – 409 while schedule entries or approval history still use it (ON DELETE RESTRICT).
+const deleteSubject = handle(async (req, res) => {
+    const subject = await service.deleteSubject(subjectIdOf(req));
+    if (!subject) throw new HttpError(404, "Subject not found");
+    res.status(200).json({ message: "Subject deleted successfully", subject });
+}, { action: "delete" });
 
 module.exports = {
     getSubjects,

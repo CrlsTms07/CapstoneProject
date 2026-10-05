@@ -417,8 +417,8 @@ export default function SchedulePlotter({ user }) {
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(data?.error || 'Auto-generate failed.')
       setDraft(current => ({ ...current, rows: rowsFromEntries([...entries, ...data.generated], options.rooms) }))
-      const missing = data.unfilled.map(item => `${item.subject_name} (${item.missing_periods} period(s): ${item.reason})`)
-      setSaveMessage(`Added ${data.generated.length} period(s). Review them, then Save Draft.${missing.length ? ` Not placed: ${missing.join('; ')}` : ''}`)
+      const missing = data.unfilled.map(item => `${item.subject_name} (${item.missing_minutes ? `${item.missing_minutes} min missing: ` : ''}${item.reason})`)
+      setSaveMessage(`Added ${data.generated.length} row(s). Review them, then Save Draft.${missing.length ? ` Not placed: ${missing.join('; ')}` : ''}`)
     } catch (generateError) {
       setError(generateError.message)
     } finally {
